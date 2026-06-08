@@ -590,86 +590,140 @@ function AddLessonDialog({ moduleId, courseId, position, onAdded }: { moduleId: 
   );
 }
 
-function detectType(file: File): string {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-  if (ext === "pdf") return "pdf";
-  if (ext === "ppt" || ext === "pptx") return "pptx";
-  return ext || file.type || "file";
+/**
+ * Reusable slides editor. Manages an ordered list of image storage paths in
+ * the "presentations" bucket. Calls onChange whenever the array is updated
+ * and the caller is expected to persist it.
+ */
+function SlidesEditor({
+  pathPrefix,
+  slides,
+  onChange,
+}: {
+  pathPrefix: string;
+  slides: string[];
+  onChange: (next: string[]) => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const paths = slides.filter((s) => !s.startsWith("http") && !previews[s]);
+      if (!paths.length) return;
+      const { data } = await supabase.storage.from("presentations").createSignedUrls(paths, 60 * 60);
+      if (cancelled || !data) return;
+      setPreviews((prev) => {
+        const next = { ...prev };
+        for (const it of data) if (it.path && it.signedUrl) next[it.path] = it.signedUrl;
+        return next;
+      });
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides.join("|")]);
+
+  const upload = async (files: FileList) => {
+    setBusy(true);
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name}: faqat rasm fayllari qabul qilinadi`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "png";
+        const path = `${pathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+        const { error } = await supabase.storage.from("presentations").upload(path, file, { contentType: file.type, upsert: false });
+        if (error) { toast.error(error.message); continue; }
+        uploaded.push(path);
+      }
+      if (uploaded.length) await onChange([...slides, ...uploaded]);
+    } finally { setBusy(false); }
+  };
+
+  const removeAt = async (i: number) => {
+    const path = slides[i];
+    if (!confirm(`Slayd ${i + 1} o'chirilsinmi?`)) return;
+    if (path && !path.startsWith("http")) {
+      await supabase.storage.from("presentations").remove([path]);
+    }
+    await onChange(slides.filter((_, idx) => idx !== i));
+  };
+
+  const move = async (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= slides.length) return;
+    const next = [...slides];
+    [next[i], next[j]] = [next[j], next[i]];
+    await onChange(next);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-muted-foreground">{slides.length} ta slayd</div>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs hover:bg-muted">
+          <Upload className="h-3.5 w-3.5" /> {busy ? "Yuklanmoqda..." : "Slayd rasm(lar) qo'shish"}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            disabled={busy}
+            onChange={(e) => { if (e.target.files?.length) { upload(e.target.files); e.target.value = ""; } }}
+          />
+        </label>
+      </div>
+      {slides.length === 0 ? (
+        <p className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+          PowerPoint yoki PDF dan slaydlarni rasm (PNG/JPG) qilib eksport qilib, ketma-ket yuklang. O'quvchilar ularni karusel ko'rinishida ko'radi va yuklab ololmaydi.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {slides.map((path, i) => (
+            <li key={path + i} className="group relative overflow-hidden rounded-md border bg-muted">
+              <div className="aspect-video w-full bg-black">
+                {previews[path] || path.startsWith("http") ? (
+                  <img src={path.startsWith("http") ? path : previews[path]} alt={`Slayd ${i + 1}`} className="h-full w-full object-contain" draggable={false} />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-xs text-white/60">...</div>
+                )}
+              </div>
+              <div className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white">#{i + 1}</div>
+              <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex gap-1">
+                  <Button type="button" size="icon" variant="secondary" className="h-6 w-6" disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp className="h-3 w-3" /></Button>
+                  <Button type="button" size="icon" variant="secondary" className="h-6 w-6" disabled={i === slides.length - 1} onClick={() => move(i, 1)}><ArrowDown className="h-3 w-3" /></Button>
+                </div>
+                <Button type="button" size="icon" variant="destructive" className="h-6 w-6" onClick={() => removeAt(i)}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 function LessonPresentationUploader({ lesson }: { lesson: any }) {
   const qc = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [localUrl, setLocalUrl] = useState<string | null>(lesson.presentation_url ?? null);
-  const [localType, setLocalType] = useState<string | null>(lesson.presentation_type ?? null);
-  const [localName, setLocalName] = useState<string | null>(lesson.presentation_name ?? null);
+  const [slides, setSlides] = useState<string[]>(lesson.presentation_slides ?? []);
 
-  useEffect(() => {
-    setLocalUrl(lesson.presentation_url ?? null);
-    setLocalType(lesson.presentation_type ?? null);
-    setLocalName(lesson.presentation_name ?? null);
-  }, [lesson.id, lesson.presentation_url, lesson.presentation_type, lesson.presentation_name]);
+  useEffect(() => { setSlides(lesson.presentation_slides ?? []); }, [lesson.id, lesson.presentation_slides]);
 
-  const upload = async (file: File) => {
-    setBusy(true);
-    try {
-      const path = `lessons/${lesson.id}/${Date.now()}-${file.name}`;
-      // remove old file if storage-backed
-      if (localUrl && !localUrl.startsWith("http")) {
-        await supabase.storage.from("presentations").remove([localUrl]);
-      }
-      const { error: upErr } = await supabase.storage.from("presentations").upload(path, file, { contentType: file.type, upsert: true });
-      if (upErr) throw upErr;
-      const ftype = detectType(file);
-      const { error } = await supabase.from("lessons").update({
-        presentation_url: path,
-        presentation_type: ftype,
-        presentation_name: file.name,
-      }).eq("id", lesson.id);
-      if (error) throw error;
-      setLocalUrl(path); setLocalType(ftype); setLocalName(file.name);
-      toast.success("Prezentatsiya yangilandi");
-      qc.invalidateQueries({ queryKey: ["admin", "course"] });
-    } catch (e: any) { toast.error(e.message ?? "Xatolik"); }
-    finally { setBusy(false); }
-  };
-
-  const remove = async () => {
-    if (!localUrl) return;
-    if (!confirm("Prezentatsiya o'chirilsinmi?")) return;
-    if (!localUrl.startsWith("http")) {
-      await supabase.storage.from("presentations").remove([localUrl]);
-    }
-    await supabase.from("lessons").update({ presentation_url: null, presentation_type: null, presentation_name: null }).eq("id", lesson.id);
-    setLocalUrl(null); setLocalType(null); setLocalName(null);
+  const persist = async (next: string[]) => {
+    setSlides(next);
+    const { error } = await supabase.from("lessons").update({ presentation_slides: next }).eq("id", lesson.id);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["admin", "course"] });
   };
 
   return (
     <div className="space-y-2 rounded-lg border p-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold"><Presentation className="mr-1 inline h-3.5 w-3.5" /> Dars prezentatsiyasi</Label>
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs hover:bg-muted">
-          <Upload className="h-3.5 w-3.5" /> {busy ? "Yuklanmoqda..." : localUrl ? "Almashtirish" : "Yuklash"}
-          <input
-            type="file"
-            accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            className="hidden"
-            disabled={busy}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload(f); e.target.value = ""; } }}
-          />
-        </label>
-      </div>
-      {localUrl ? (
-        <div className="flex items-center gap-2 text-sm">
-          <FileText className="h-4 w-4 text-primary" />
-          <span className="flex-1 truncate">{localName ?? "Prezentatsiya"}</span>
-          <Badge variant="outline" className="uppercase">{localType ?? "fayl"}</Badge>
-          <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={remove}><Trash2 className="h-3.5 w-3.5" /></Button>
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">PDF yoki PPTX yuklang. Sahifada to'g'ridan-to'g'ri ko'rinadi (PDF ichki, PPTX Office viewer orqali).</p>
-      )}
+      <Label className="text-sm font-semibold"><Presentation className="mr-1 inline h-3.5 w-3.5" /> Dars prezentatsiyasi (slayd rasmlari)</Label>
+      <SlidesEditor pathPrefix={`lessons/${lesson.id}`} slides={slides} onChange={persist} />
     </div>
   );
 }
