@@ -768,27 +768,18 @@ function CoursePresentationsManager({ courseId }: { courseId: string }) {
       {items.length === 0 ? (
         <Card><CardContent className="p-6 text-center text-sm text-muted-foreground">Hozircha alohida prezentatsiyalar yo'q. 5-6 darsni bir prezentatsiyada jamlash uchun yangisini qo'shing.</CardContent></Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {items.map((item: any, i: number) => (
-            <Card key={item.id}>
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="grid h-9 w-9 place-items-center rounded bg-primary/10 text-sm font-bold text-primary">{i + 1}</div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{item.title}</div>
-                  {item.description && <div className="truncate text-xs text-muted-foreground">{item.description}</div>}
-                </div>
-                <Badge variant="outline" className="uppercase">{item.file_type}</Badge>
-                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === 0} onClick={() => move(item, -1)}><ArrowUp className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === items.length - 1} onClick={() => move(item, 1)}><ArrowDown className="h-4 w-4" /></Button>
-                <EditCoursePresentationDialog item={item} onSaved={refresh} />
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => del(item)}><Trash2 className="h-4 w-4" /></Button>
-              </CardContent>
-              {item.url && (
-                <CardContent className="border-t p-3 pt-3">
-                  <PresentationViewer url={item.url} type={item.file_type} name={item.file_name} title={item.title} />
-                </CardContent>
-              )}
-            </Card>
+            <CoursePresentationCardAdmin
+              key={item.id}
+              item={item}
+              index={i}
+              total={items.length}
+              onMoveUp={() => move(item, -1)}
+              onMoveDown={() => move(item, 1)}
+              onDelete={() => del(item)}
+              onChanged={refresh}
+            />
           ))}
         </div>
       )}
@@ -796,29 +787,97 @@ function CoursePresentationsManager({ courseId }: { courseId: string }) {
   );
 }
 
+function CoursePresentationCardAdmin({
+  item, index, total, onMoveUp, onMoveDown, onDelete, onChanged,
+}: {
+  item: any; index: number; total: number;
+  onMoveUp: () => void; onMoveDown: () => void; onDelete: () => void; onChanged: () => void;
+}) {
+  const [title, setTitle] = useState<string>(item.title);
+  const [description, setDescription] = useState<string>(item.description ?? "");
+  const [slides, setSlides] = useState<string[]>(item.slides ?? []);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setTitle(item.title);
+    setDescription(item.description ?? "");
+    setSlides(item.slides ?? []);
+  }, [item.id, item.title, item.description, item.slides]);
+
+  const saveField = async (patch: any) => {
+    const { error } = await supabase.from("course_presentations").update(patch).eq("id", item.id);
+    if (error) toast.error(error.message); else onChanged();
+  };
+
+  const persistSlides = async (next: string[]) => {
+    setSlides(next);
+    const { error } = await supabase.from("course_presentations").update({ slides: next }).eq("id", item.id);
+    if (error) { toast.error(error.message); return; }
+    onChanged();
+  };
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-3">
+        <div className="flex items-center gap-2">
+          <div className="grid h-9 w-9 flex-shrink-0 place-items-center rounded bg-primary/10 text-sm font-bold text-primary">{index + 1}</div>
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => title !== item.title && saveField({ title })}
+            className="h-9 flex-1"
+          />
+          <Badge variant="outline">{slides.length} slayd</Badge>
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={index === 0} onClick={onMoveUp}><ArrowUp className="h-4 w-4" /></Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={index === total - 1} onClick={onMoveDown}><ArrowDown className="h-4 w-4" /></Button>
+          <Button variant="outline" size="sm" onClick={() => setExpanded((v) => !v)}>{expanded ? "Yopish" : "Tahrirlash"}</Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={onDelete}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+        {expanded && (
+          <div className="space-y-3 border-t pt-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Tavsif</Label>
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => description !== (item.description ?? "") && saveField({ description: description || null })}
+                placeholder="Masalan: 1-5 darslar takrori"
+              />
+            </div>
+            <SlidesEditor
+              pathPrefix={`courses/${item.course_id}/${item.id}`}
+              slides={slides}
+              onChange={persistSlides}
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function AddCoursePresentationDialog({ courseId, position, onAdded }: { courseId: string; position: number; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return toast.error("Sarlavha kiriting");
-    if (!file) return toast.error("Fayl tanlang");
     setBusy(true);
     try {
-      const path = `courses/${courseId}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("presentations").upload(path, file, { contentType: file.type });
-      if (upErr) throw upErr;
       const { error } = await supabase.from("course_presentations").insert({
-        course_id: courseId, title, description: description || null,
-        url: path, file_type: detectType(file), file_name: file.name, position,
+        course_id: courseId,
+        title,
+        description: description || null,
+        slides: [],
+        position,
       });
       if (error) throw error;
-      toast.success("Qo'shildi");
-      setOpen(false); setTitle(""); setDescription(""); setFile(null);
+      toast.success("Qo'shildi. Endi slayd rasmlarni yuklang.");
+      setOpen(false); setTitle(""); setDescription("");
       onAdded();
     } catch (e: any) { toast.error(e.message ?? "Xatolik"); }
     finally { setBusy(false); }
@@ -832,73 +891,7 @@ function AddCoursePresentationDialog({ courseId, position, onAdded }: { courseId
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-2"><Label>Sarlavha</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
           <div className="space-y-2"><Label>Tavsif (ixtiyoriy)</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Masalan: 1-5 darslar takrori" /></div>
-          <div className="space-y-2">
-            <Label>PDF yoki PPTX fayl</Label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed p-4 text-sm text-muted-foreground hover:bg-muted/50">
-              <Upload className="h-5 w-5" />
-              <span>{file ? file.name : "Faylni tanlang"}</span>
-              <input type="file" accept=".pdf,.ppt,.pptx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            </label>
-          </div>
-          <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Yuklanmoqda..." : "Saqlash"}</Button></DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditCoursePresentationDialog({ item, onSaved }: { item: any; onSaved: () => void }) {
-  const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(item.title);
-  const [description, setDescription] = useState(item.description ?? "");
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    if (open) { setTitle(item.title); setDescription(item.description ?? ""); setFile(null); }
-  }, [open, item]);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      const patch: any = { title, description: description || null };
-      if (file) {
-        if (item.url && !item.url.startsWith("http")) {
-          await supabase.storage.from("presentations").remove([item.url]);
-        }
-        const path = `courses/${item.course_id}/${Date.now()}-${file.name}`;
-        const { error: upErr } = await supabase.storage.from("presentations").upload(path, file, { contentType: file.type });
-        if (upErr) throw upErr;
-        patch.url = path;
-        patch.file_type = detectType(file);
-        patch.file_name = file.name;
-      }
-      const { error } = await supabase.from("course_presentations").update(patch).eq("id", item.id);
-      if (error) throw error;
-      toast.success("Saqlandi");
-      setOpen(false);
-      onSaved();
-    } catch (e: any) { toast.error(e.message ?? "Xatolik"); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button></DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle className="font-display">Tahrirlash</DialogTitle></DialogHeader>
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2"><Label>Sarlavha</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
-          <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
-          <div className="space-y-2">
-            <Label>Faylni almashtirish (ixtiyoriy)</Label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-lg border-2 border-dashed p-4 text-sm text-muted-foreground hover:bg-muted/50">
-              <Upload className="h-5 w-5" />
-              <span>{file ? file.name : item.file_name ?? "Joriy fayl"}</span>
-              <input type="file" accept=".pdf,.ppt,.pptx" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            </label>
-          </div>
+          <p className="text-xs text-muted-foreground">Sarlavhani saqlagandan keyin slayd rasmlarini "Tahrirlash" tugmasi orqali yuklaysiz.</p>
           <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Saqlanmoqda..." : "Saqlash"}</Button></DialogFooter>
         </form>
       </DialogContent>
