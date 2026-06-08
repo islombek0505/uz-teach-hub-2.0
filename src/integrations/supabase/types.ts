@@ -53,6 +53,42 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          admin_reply: string | null
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          subject: string
+          type: Database["public"]["Enums"]["feedback_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          subject: string
+          type?: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_reply?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          subject?: string
+          type?: Database["public"]["Enums"]["feedback_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lesson_materials: {
         Row: {
           created_at: string
@@ -299,7 +335,10 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          birth_date: string | null
+          city: string | null
           created_at: string
+          email: string | null
           full_name: string | null
           id: string
           phone: string | null
@@ -307,7 +346,10 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id: string
           phone?: string | null
@@ -315,7 +357,10 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
           created_at?: string
+          email?: string | null
           full_name?: string | null
           id?: string
           phone?: string | null
@@ -485,6 +530,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "student"
       course_mode: "strict" | "free"
+      feedback_type: "suggestion" | "feedback" | "complaint" | "question"
       lesson_type: "video" | "presentation" | "text"
       payment_status: "pending" | "approved" | "rejected"
     }
@@ -616,6 +662,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "student"],
       course_mode: ["strict", "free"],
+      feedback_type: ["suggestion", "feedback", "complaint", "question"],
       lesson_type: ["video", "presentation", "text"],
       payment_status: ["pending", "approved", "rejected"],
     },
