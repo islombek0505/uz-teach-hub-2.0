@@ -23,7 +23,7 @@ function CoursesList() {
       const [{ data: cs, error }, { data: subs }] = await Promise.all([
         supabase
           .from("courses")
-          .select("id, title, description, cover_url, category, mode, price, lessons(count)")
+          .select("id, title, description, cover_url, category, price, lessons(count)")
           .eq("published", true)
           .order("created_at", { ascending: false }),
         supabase.from("subscriptions").select("course_id, active, expires_at").eq("user_id", user!.id),
@@ -60,7 +60,6 @@ function CoursesList() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-3 left-3 flex gap-2">
                   {c.category && <Badge variant="secondary" className="backdrop-blur-sm">{c.category}</Badge>}
-                  <Badge variant={c.mode === "strict" ? "default" : "outline"} className="backdrop-blur-sm">{c.mode === "strict" ? "Qat'iy" : "Erkin"}</Badge>
                 </div>
                 {c.enrolled && (
                   <div className="absolute right-3 top-3"><Badge className="bg-success text-success-foreground"><CheckCircle2 className="mr-1 h-3 w-3" /> Faol</Badge></div>

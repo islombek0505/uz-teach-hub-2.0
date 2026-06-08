@@ -19,7 +19,7 @@ function AdminCourses() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("courses")
-        .select("id, title, description, cover_url, category, mode, published, price, lessons(count)")
+        .select("id, title, description, cover_url, category, published, price, lessons(count)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       const list = data ?? [];
@@ -68,7 +68,6 @@ function AdminCourses() {
               <CardContent className="p-5">
                 <div className="flex flex-wrap gap-2">
                   {c.category && <Badge variant="secondary">{c.category}</Badge>}
-                  <Badge variant={c.mode === "strict" ? "default" : "outline"}>{c.mode === "strict" ? "Qat'iy" : "Erkin"}</Badge>
                   {!c.published && <Badge variant="outline">Qoralama</Badge>}
                 </div>
                 <h3 className="mt-3 font-display text-lg font-semibold line-clamp-1">{c.title}</h3>

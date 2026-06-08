@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +20,6 @@ function NewCourse() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("dasturlash");
-  const [mode, setMode] = useState<"strict" | "free">("strict");
   const [price, setPrice] = useState("0");
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +28,7 @@ function NewCourse() {
     setLoading(true);
     const { data, error } = await supabase
       .from("courses")
-      .insert({ title, description, category, mode, price: Number(price) || 0, published: false })
+      .insert({ title, description, category, price: Number(price) || 0, published: false })
       .select("id")
       .single();
     setLoading(false);
@@ -65,26 +63,6 @@ function NewCourse() {
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Narx (so'm)</Label><Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>O'qish rejimi *</Label>
-                <RadioGroup value={mode} onValueChange={(v) => setMode(v as "strict" | "free")} className="grid gap-3 sm:grid-cols-2">
-                  <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <RadioGroupItem value="strict" className="mt-1" />
-                    <div>
-                      <div className="font-medium">Qat'iy rejim</div>
-                      <div className="mt-1 text-xs text-muted-foreground">Darslar ketma-ket, test 80%+ majburiy</div>
-                    </div>
-                  </Label>
-                  <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <RadioGroupItem value="free" className="mt-1" />
-                    <div>
-                      <div className="font-medium">Erkin rejim</div>
-                      <div className="mt-1 text-xs text-muted-foreground">Barcha darslar ochiq, test ixtiyoriy</div>
-                    </div>
-                  </Label>
-                </RadioGroup>
               </div>
             </CardContent>
           </Card>

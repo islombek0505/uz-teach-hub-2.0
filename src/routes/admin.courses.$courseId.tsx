@@ -108,15 +108,6 @@ function EditCourse() {
             <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} defaultValue={course.description ?? ""} onBlur={(e) => e.target.value !== (course.description ?? "") && saveCourse({ description: e.target.value })} /></div>
             <div className="space-y-2"><Label>Kategoriya</Label><Input defaultValue={course.category ?? ""} onBlur={(e) => e.target.value !== (course.category ?? "") && saveCourse({ category: e.target.value })} /></div>
             <div className="space-y-2"><Label>Narx (so'm)</Label><Input type="number" defaultValue={course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price) && saveCourse({ price: Number(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Rejim</Label>
-              <Select value={course.mode} onValueChange={(v) => saveCourse({ mode: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="strict">Qat'iy</SelectItem>
-                  <SelectItem value="free">Erkin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <div className="text-sm font-medium">Nashr etilgan</div>
