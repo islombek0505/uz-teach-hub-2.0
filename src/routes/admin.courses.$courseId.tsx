@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ChevronLeft, Plus, Trash2, Video, FileText, ListChecks, Save, Upload } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, Video, FileText, ListChecks, Save, Upload, Pencil, Image as ImageIcon, Paperclip, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -102,6 +102,7 @@ function EditCourse() {
         <Card>
           <CardHeader><CardTitle className="font-display">Kurs sozlamalari</CardTitle></CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2"><CoverUploader courseId={courseId} coverUrl={course.cover_url} onChange={invalidate} /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Nomi</Label><Input defaultValue={course.title} onBlur={(e) => e.target.value !== course.title && saveCourse({ title: e.target.value })} /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} defaultValue={course.description ?? ""} onBlur={(e) => e.target.value !== (course.description ?? "") && saveCourse({ description: e.target.value })} /></div>
             <div className="space-y-2"><Label>Kategoriya</Label><Input defaultValue={course.category ?? ""} onBlur={(e) => e.target.value !== (course.category ?? "") && saveCourse({ category: e.target.value })} /></div>
