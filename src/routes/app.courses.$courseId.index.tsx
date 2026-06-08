@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { PlayCircle, FileText, CheckCircle2, Lock, BookOpen, Upload, CreditCard, Presentation } from "lucide-react";
+import { PlayCircle, FileText, CheckCircle2, Lock, BookOpen, Upload, CreditCard, Presentation, UserCheck, Send, Instagram } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,23 @@ function CourseDetail() {
 
       const { data: sub } = await supabase.from("subscriptions").select("active, expires_at").eq("user_id", user!.id).eq("course_id", courseId).maybeSingle();
       const enrolled = !!sub?.active && (!sub.expires_at || new Date(sub.expires_at) > new Date());
+      const { data: subFull } = enrolled
+        ? await supabase
+            .from("subscriptions")
+            .select("tariff, mentor_id")
+            .eq("user_id", user!.id)
+            .eq("course_id", courseId)
+            .maybeSingle()
+        : { data: null as any };
+      let mentor: any = null;
+      if (subFull?.mentor_id) {
+        const { data: mp } = await supabase
+          .from("profiles")
+          .select("id, full_name, telegram_url, instagram_url, phone")
+          .eq("id", subFull.mentor_id)
+          .maybeSingle();
+        mentor = mp ?? null;
+      }
 
       const { data: progress } = await supabase.from("lesson_progress").select("lesson_id, completed").eq("user_id", user!.id).eq("course_id", courseId);
       const completedSet = new Set((progress ?? []).filter((p: any) => p.completed).map((p: any) => p.lesson_id));
@@ -67,26 +85,21 @@ function CourseDetail() {
         presentations = pres ?? [];
       }
 
-      return { course, enrolled, completedSet, pendingPayment: pending?.[0] ?? null, presentations };
+      return { course, enrolled, completedSet, pendingPayment: pending?.[0] ?? null, presentations, tariff: subFull?.tariff ?? null, mentor };
     },
   });
 
   if (isLoading || !data) return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
-  const { course, enrolled, completedSet, pendingPayment, presentations } = data;
+  const { course, enrolled, completedSet, pendingPayment, presentations, tariff, mentor } = data;
 
   const allLessons = course.modules.flatMap((m: any) => m.lessons);
   const total = allLessons.length;
   const done = allLessons.filter((l: any) => completedSet.has(l.id)).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
 
-  // sequential gating for strict mode
-  let firstIncomplete = true;
-  const access: Record<string, "done" | "current" | "locked"> = {};
-  for (const l of allLessons) {
-    if (completedSet.has(l.id)) access[l.id] = "done";
-    else if (firstIncomplete) { access[l.id] = "current"; firstIncomplete = false; }
-    else access[l.id] = course.mode === "strict" ? "locked" : "current";
-  }
+  // All lessons are open once enrolled — no strict gating.
+  const access: Record<string, "done" | "current"> = {};
+  for (const l of allLessons) access[l.id] = completedSet.has(l.id) ? "done" : "current";
 
   return (
     <>
@@ -98,9 +111,6 @@ function CourseDetail() {
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white lg:p-8">
               <div className="flex flex-wrap gap-2">
                 {course.category && <Badge variant="secondary">{course.category}</Badge>}
-                <Badge variant={course.mode === "strict" ? "default" : "outline"} className="border-white/30 bg-white/10 backdrop-blur-sm text-white">
-                  {course.mode === "strict" ? "Qat'iy — ketma-ket" : "Erkin — barcha darslar ochiq"}
-                </Badge>
               </div>
               <h1 className="mt-3 font-display text-2xl font-bold lg:text-4xl">{course.title}</h1>
               <p className="mt-2 max-w-2xl text-sm text-white/80 lg:text-base">{course.description}</p>
@@ -126,6 +136,39 @@ function CourseDetail() {
             </CardContent>
           </Card>
         ) : (
+          <>
+          {tariff === "mentor" && (
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-primary" />
+                  <div className="font-display font-semibold">Mentor yordami bilan o'rganmoqdasiz</div>
+                </div>
+                {mentor ? (
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="font-medium">{mentor.full_name || "Mentor"}</div>
+                      <div className="text-xs text-muted-foreground">Savol bo'lsa, to'g'ridan-to'g'ri bog'laning</div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {mentor.telegram_url && (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={mentor.telegram_url} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" /> Telegram</a>
+                        </Button>
+                      )}
+                      {mentor.instagram_url && (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={mentor.instagram_url} target="_blank" rel="noreferrer"><Instagram className="mr-1 h-3.5 w-3.5" /> Instagram</a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm text-muted-foreground">Mentor tez orada biriktiriladi. Admin tasdiqlagach kontaktlar shu yerda paydo bo'ladi.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card>
             <CardContent className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -138,6 +181,7 @@ function CourseDetail() {
               </div>
             </CardContent>
           </Card>
+          </>
         )}
 
         <div>
@@ -163,7 +207,7 @@ function CourseDetail() {
                     <ul className="divide-y">
                       {m.lessons.map((l: any, li: number) => {
                         const status = access[l.id];
-                        const locked = !enrolled || status === "locked";
+                          const locked = !enrolled;
                         const Icon = l.type === "presentation" || l.type === "text" ? FileText : PlayCircle;
                         const inner = (
                           <>
@@ -171,7 +215,7 @@ function CourseDetail() {
                             <div className="flex-1">
                               <div className="text-sm font-medium">{li + 1}. {l.title}</div>
                               <div className="text-xs text-muted-foreground capitalize">
-                                {l.type}{l.has_quiz && " • Test bor"}{locked && !enrolled && " • Yopiq"}{locked && enrolled && " • Oldingi darsni yakunlang"}
+                                  {l.type}{l.has_quiz && " • Test bor"}{locked && " • Yopiq"}
                               </div>
                             </div>
                           </>
