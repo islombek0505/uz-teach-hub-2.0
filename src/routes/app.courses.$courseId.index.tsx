@@ -116,7 +116,6 @@ function CourseDetail() {
               <p className="mt-2 max-w-2xl text-sm text-white/80 lg:text-base">{course.description}</p>
               <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
                 <span className="flex items-center gap-1.5"><BookOpen className="h-4 w-4" /> {total} dars</span>
-                {Number(course.price) > 0 && <span className="font-display text-lg font-bold">{fmt(Number(course.price))}</span>}
               </div>
             </div>
           </div>
@@ -131,7 +130,7 @@ function CourseDetail() {
                   {pendingPayment ? "To'lovingiz tasdiq kutmoqda. Admin tasdiqlagach kurs ochiladi." : "To'lov qiling va chek yuboring — admin tasdiqlagach kurs ochiladi."}
                 </p>
               </div>
-              {!pendingPayment && <EnrollDialog courseId={courseId} courseTitle={course.title} price={Number(course.price)} userId={user!.id} />}
+              {!pendingPayment && <EnrollDialog courseId={courseId} courseTitle={course.title} priceSelf={Number(course.price_self ?? course.price)} priceMentor={Number(course.price_mentor ?? course.price)} userId={user!.id} />}
               {pendingPayment && <Badge className="bg-warning text-warning-foreground">Tasdiq kutilmoqda</Badge>}
             </CardContent>
           </Card>
@@ -297,13 +296,14 @@ function CoursePresentationCard({ item }: { item: any }) {
   );
 }
 
-function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: string; courseTitle: string; price: number; userId: string }) {
+function EnrollDialog({ courseId, courseTitle, priceSelf, priceMentor, userId }: { courseId: string; courseTitle: string; priceSelf: number; priceMentor: number; userId: string }) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
   const [tariff, setTariff] = useState<"mentor" | "self">("self");
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
+  const price = tariff === "mentor" ? priceMentor : priceSelf;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -337,7 +337,7 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg"><CreditCard className="mr-2 h-4 w-4" /> {price > 0 ? `${fmt(price)} — Sotib olish` : "Bepul yozilish"}</Button>
+        <Button size="lg"><CreditCard className="mr-2 h-4 w-4" /> Sotib olish</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle className="font-display">{courseTitle} — to'lov</DialogTitle></DialogHeader>
@@ -350,6 +350,7 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
                 <div>
                   <div className="font-medium">Erkin o'rganish</div>
                   <div className="mt-1 text-xs text-muted-foreground">Faqat video darslar — mentor yo'q</div>
+                  <div className="mt-1 font-display text-sm font-bold">{priceSelf > 0 ? fmt(priceSelf) : "Bepul"}</div>
                 </div>
               </Label>
               <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
@@ -357,6 +358,7 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
                 <div>
                   <div className="font-medium">Mentor yordami bilan</div>
                   <div className="mt-1 text-xs text-muted-foreground">Sizga shaxsiy mentor biriktiriladi va kontaktlari kursda ko'rinadi</div>
+                  <div className="mt-1 font-display text-sm font-bold">{priceMentor > 0 ? fmt(priceMentor) : "Bepul"}</div>
                 </div>
               </Label>
             </RadioGroup>
