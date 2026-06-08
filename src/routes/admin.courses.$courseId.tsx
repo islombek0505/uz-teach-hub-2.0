@@ -408,6 +408,8 @@ function LessonEditDialog({ lesson, onChange }: { lesson: any; onChange: () => v
 
           <MaterialsManager lessonId={lesson.id} />
 
+          <LessonPresentationUploader lesson={lesson} />
+
           <DialogFooter>
             <Button type="submit" disabled={busy}><Save className="mr-2 h-4 w-4" /> {busy ? "Saqlanmoqda..." : "Saqlash"}</Button>
           </DialogFooter>
