@@ -16,7 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
-export const Route = createFileRoute("/app/courses/$courseId")({
+export const Route = createFileRoute("/app/courses/$courseId/")({
   component: CourseDetail,
   notFoundComponent: () => <div className="p-10 text-center">Kurs topilmadi</div>,
   errorComponent: ({ error }) => <div className="p-10 text-center text-destructive">{error.message}</div>,
