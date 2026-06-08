@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,7 +34,7 @@ function LessonPlayer() {
     queryFn: async () => {
       const { data: course, error } = await supabase
         .from("courses")
-        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description))")
+        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content))")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;
@@ -45,13 +45,14 @@ function LessonPlayer() {
       const lesson = allLessons.find((l: any) => l.id === lessonId);
       if (!lesson) throw notFound();
 
-      const [{ data: progress }, { data: questions }, { data: attempts }] = await Promise.all([
+      const [{ data: progress }, { data: questions }, { data: attempts }, { data: materials }] = await Promise.all([
         supabase.from("lesson_progress").select("lesson_id, completed").eq("user_id", user!.id).eq("course_id", courseId),
         lesson.has_quiz ? supabase.from("quiz_questions").select("*").eq("lesson_id", lessonId).order("position") : Promise.resolve({ data: [] as any[] }),
         lesson.has_quiz ? supabase.from("quiz_attempts").select("score, passed").eq("user_id", user!.id).eq("lesson_id", lessonId).order("created_at", { ascending: false }).limit(1) : Promise.resolve({ data: [] as any[] }),
+        supabase.from("lesson_materials").select("*").eq("lesson_id", lessonId).order("created_at"),
       ]);
       const completedSet = new Set((progress ?? []).filter((p: any) => p.completed).map((p: any) => p.lesson_id));
-      return { course, allLessons, lesson, completedSet, questions: questions ?? [], lastAttempt: attempts?.[0] ?? null };
+      return { course, allLessons, lesson, completedSet, questions: questions ?? [], lastAttempt: attempts?.[0] ?? null, materials: materials ?? [] };
     },
   });
 
@@ -71,7 +72,7 @@ function LessonPlayer() {
   useEffect(() => { setTab("content"); setAnswers({}); setSubmitted(false); setScore(0); }, [lessonId]);
 
   if (isLoading || !data) return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
-  const { course, allLessons, lesson, completedSet, questions, lastAttempt } = data;
+  const { course, allLessons, lesson, completedSet, questions, lastAttempt, materials } = data;
   const idx = allLessons.findIndex((l: any) => l.id === lessonId);
   const prev = idx > 0 ? allLessons[idx - 1] : null;
   const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
@@ -163,6 +164,8 @@ function LessonPlayer() {
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
                 <TabsTrigger value="content">Tavsif</TabsTrigger>
+                {(lesson.content || lesson.type === "presentation" || lesson.type === "text") && <TabsTrigger value="presentation">Materiallar</TabsTrigger>}
+                {materials.length > 0 && <TabsTrigger value="files">Fayllar ({materials.length})</TabsTrigger>}
                 {lesson.has_quiz && <TabsTrigger value="quiz">Test</TabsTrigger>}
               </TabsList>
               <TabsContent value="content" className="mt-4">
@@ -174,6 +177,30 @@ function LessonPlayer() {
                   )}
                 </CardContent></Card>
               </TabsContent>
+
+              {(lesson.content || lesson.type === "presentation" || lesson.type === "text") && (
+                <TabsContent value="presentation" className="mt-4">
+                  <Card>
+                    <CardContent className="p-6">
+                      {lesson.content ? (
+                        <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: lesson.content }} />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">Bu dars uchun qo'shimcha mazmun qo'shilmagan.</div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              {materials.length > 0 && (
+                <TabsContent value="files" className="mt-4">
+                  <Card>
+                    <CardContent className="space-y-2 p-4">
+                      {materials.map((m: any) => <MaterialItem key={m.id} material={m} />)}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
 
               {lesson.has_quiz && (
                 <TabsContent value="quiz" className="mt-4">
@@ -293,4 +320,22 @@ function maskPhone(s: string) {
   const digits = s.replace(/\D+/g, "");
   if (digits.length < 7) return s;
   return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} *** ** ${digits.slice(-2)}`;
+}
+
+function MaterialItem({ material }: { material: any }) {
+  const open = async () => {
+    const { data, error } = await supabase.storage.from("materials").createSignedUrl(material.storage_path, 60 * 10);
+    if (error || !data) return toast.error("Faylni ochib bo'lmadi");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <button type="button" onClick={open} className="flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors hover:bg-muted/50">
+      <Paperclip className="h-4 w-4 text-primary" />
+      <div className="flex-1">
+        <div className="text-sm font-medium">{material.name}</div>
+        <div className="text-xs text-muted-foreground">{material.mime_type ?? ""} {material.size_bytes ? `• ${Math.round(material.size_bytes / 1024)} KB` : ""}</div>
+      </div>
+      <Download className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
 }

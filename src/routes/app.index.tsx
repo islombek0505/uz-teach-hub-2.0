@@ -36,7 +36,14 @@ function Dashboard() {
       const courseIds = (subsData ?? []).map((s: any) => s.course_id);
       if (courseIds.length) {
         const { data: cs } = await supabase.from("courses").select("*, modules(*, lessons(id))").in("id", courseIds);
-        setCourses(cs ?? []);
+        const list = cs ?? [];
+        await Promise.all(list.map(async (c: any) => {
+          if (c.cover_url && !c.cover_url.startsWith("http")) {
+            const { data: s } = await supabase.storage.from("course-covers").createSignedUrl(c.cover_url, 60 * 60);
+            c.cover_url = s?.signedUrl ?? null;
+          }
+        }));
+        setCourses(list);
       }
       if (attempts && attempts.length) {
         setAvgScore(Math.round(attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / attempts.length));

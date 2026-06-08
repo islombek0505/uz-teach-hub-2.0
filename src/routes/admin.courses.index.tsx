@@ -22,7 +22,14 @@ function AdminCourses() {
         .select("id, title, description, cover_url, category, mode, published, price, lessons(count)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      const list = data ?? [];
+      await Promise.all(list.map(async (c: any) => {
+        if (c.cover_url && !c.cover_url.startsWith("http")) {
+          const { data: s } = await supabase.storage.from("course-covers").createSignedUrl(c.cover_url, 60 * 60);
+          c.cover_url = s?.signedUrl ?? null;
+        }
+      }));
+      return list;
     },
   });
 

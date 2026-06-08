@@ -42,6 +42,12 @@ function CourseDetail() {
       course.modules = (course.modules ?? []).sort((a: any, b: any) => a.position - b.position);
       for (const m of course.modules) m.lessons = (m.lessons ?? []).sort((a: any, b: any) => a.position - b.position);
 
+      // Resolve signed URL for cover if it's a storage path
+      if (course.cover_url && !course.cover_url.startsWith("http")) {
+        const { data: signed } = await supabase.storage.from("course-covers").createSignedUrl(course.cover_url, 60 * 60);
+        course.cover_url = signed?.signedUrl ?? null;
+      }
+
       const { data: sub } = await supabase.from("subscriptions").select("active, expires_at").eq("user_id", user!.id).eq("course_id", courseId).maybeSingle();
       const enrolled = !!sub?.active && (!sub.expires_at || new Date(sub.expires_at) > new Date());
 

@@ -32,7 +32,14 @@ function CoursesList() {
       const enrolled = new Set(
         (subs ?? []).filter((s: any) => s.active && (!s.expires_at || new Date(s.expires_at) > new Date())).map((s: any) => s.course_id),
       );
-      return (cs ?? []).map((c: any) => ({ ...c, enrolled: enrolled.has(c.id) }));
+      const mapped = (cs ?? []).map((c: any) => ({ ...c, enrolled: enrolled.has(c.id) }));
+      await Promise.all(mapped.map(async (c: any) => {
+        if (c.cover_url && !c.cover_url.startsWith("http")) {
+          const { data: s } = await supabase.storage.from("course-covers").createSignedUrl(c.cover_url, 60 * 60);
+          c.cover_url = s?.signedUrl ?? null;
+        }
+      }));
+      return mapped;
     },
   });
 
