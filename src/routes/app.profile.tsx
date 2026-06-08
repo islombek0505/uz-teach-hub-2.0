@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -38,7 +39,16 @@ function ProfilePage() {
       email: profile.email || null,
       birth_date: profile.birth_date || null,
       city: profile.city || null,
-      ...(isMentor ? { telegram_url: profile.telegram_url || null, instagram_url: profile.instagram_url || null } : {}),
+      ...(isMentor ? {
+        telegram_url: profile.telegram_url || null,
+        instagram_url: profile.instagram_url || null,
+        headline: profile.headline || null,
+        bio: profile.bio || null,
+        experience_years: profile.experience_years === "" || profile.experience_years == null ? null : Number(profile.experience_years),
+        expertise: typeof profile.expertiseText === "string"
+          ? profile.expertiseText.split(",").map((s: string) => s.trim()).filter(Boolean)
+          : (profile.expertise ?? []),
+      } : {}),
     }).eq("id", user.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
