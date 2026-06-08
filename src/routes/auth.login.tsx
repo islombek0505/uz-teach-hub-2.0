@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Phone, Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { phoneToEmail } from "@/lib/auth";
 
 export const Route = createFileRoute("/auth/login")({
   component: LoginPage,
@@ -14,11 +16,25 @@ function LoginPage() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    const email = phoneToEmail(phone);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) {
+      setLoading(false);
+      toast.error("Telefon yoki parol noto'g'ri");
+      return;
+    }
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
     toast.success("Tizimga kirildi!");
-    setTimeout(() => navigate({ to: "/app" }), 600);
+    navigate({ to: isAdmin ? "/admin" : "/app" });
   };
 
   return (
@@ -44,7 +60,9 @@ function LoginPage() {
             <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10" required />
           </div>
         </div>
-        <Button type="submit" className="w-full" size="lg">Kirish</Button>
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          {loading ? "Kiritilmoqda..." : "Kirish"}
+        </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -53,8 +71,7 @@ function LoginPage() {
       </p>
 
       <div className="mt-8 rounded-lg border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
-        <strong>Demo:</strong> O'quvchi sifatida — istalgan ma'lumot kiriting,{" "}
-        <Link to="/admin" className="font-medium text-primary underline">admin paneli</Link>
+        Telefon raqamingiz <strong>+998</strong> bilan boshlanishi shart. Raqamlardan tashqari belgilar e'tiborga olinmaydi.
       </div>
     </div>
   );
