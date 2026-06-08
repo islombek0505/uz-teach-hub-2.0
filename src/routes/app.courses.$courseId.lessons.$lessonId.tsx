@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,72 +7,109 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { courses } from "@/lib/mock-data";
-import {
-  PlayCircle,
-  Pause,
-  FileText,
-  ChevronLeft,
-  ChevronRight,
-  CheckCircle2,
-  Maximize2,
-  Settings as SettingsIcon,
-  Volume2,
-  ShieldCheck,
-  ListChecks,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { getLessonPlayback } from "@/lib/bunny.functions";
 
 export const Route = createFileRoute("/app/courses/$courseId/lessons/$lessonId")({
   component: LessonPlayer,
   notFoundComponent: () => <div className="p-10 text-center">Dars topilmadi</div>,
-  errorComponent: () => <div className="p-10 text-center">Xatolik</div>,
+  errorComponent: ({ error }) => <div className="p-10 text-center text-destructive">{error.message}</div>,
 });
-
-const sampleQuiz = [
-  { id: "q1", question: "JavaScript-da o'zgaruvchini e'lon qilish uchun qaysi kalit so'z ishlatiladi?", options: ["var, let, const", "int, string", "define, declare", "make, set"], correctIndex: 0 },
-  { id: "q2", question: "HTML qaysi tilning qisqartmasi?", options: ["Hyper Text Markup Language", "High Tech Modern Language", "Home Tool Markup Language", "Hyperlink Markup Language"], correctIndex: 0 },
-  { id: "q3", question: "CSS asosan nima uchun ishlatiladi?", options: ["Serverdagi ma'lumotlarni saqlash", "Sahifani dizayn qilish", "Database boshqaruvi", "API yaratish"], correctIndex: 1 },
-];
 
 function LessonPlayer() {
   const { courseId, lessonId } = Route.useParams();
   const navigate = useNavigate();
-  const course = courses.find((c) => c.id === courseId);
-  if (!course) throw notFound();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const fetchPlayback = useServerFn(getLessonPlayback);
 
-  const allLessons = course.modules.flatMap((m) => m.lessons.map((l) => ({ ...l, moduleId: m.id, moduleTitle: m.title })));
-  const idx = allLessons.findIndex((l) => l.id === lessonId);
-  const lesson = allLessons[idx];
-  if (!lesson) throw notFound();
+  const { data, isLoading } = useQuery({
+    enabled: !!user,
+    queryKey: ["app", "lesson", lessonId, user?.id],
+    queryFn: async () => {
+      const { data: course, error } = await supabase
+        .from("courses")
+        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description))")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (error) throw error;
+      if (!course) throw notFound();
+      course.modules = (course.modules ?? []).sort((a: any, b: any) => a.position - b.position);
+      for (const m of course.modules) m.lessons = (m.lessons ?? []).sort((a: any, b: any) => a.position - b.position);
+      const allLessons = course.modules.flatMap((m: any) => m.lessons.map((l: any) => ({ ...l, moduleTitle: m.title })));
+      const lesson = allLessons.find((l: any) => l.id === lessonId);
+      if (!lesson) throw notFound();
 
-  const prev = idx > 0 ? allLessons[idx - 1] : null;
-  const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
+      const [{ data: progress }, { data: questions }, { data: attempts }] = await Promise.all([
+        supabase.from("lesson_progress").select("lesson_id, completed").eq("user_id", user!.id).eq("course_id", courseId),
+        lesson.has_quiz ? supabase.from("quiz_questions").select("*").eq("lesson_id", lessonId).order("position") : Promise.resolve({ data: [] as any[] }),
+        lesson.has_quiz ? supabase.from("quiz_attempts").select("score, passed").eq("user_id", user!.id).eq("lesson_id", lessonId).order("created_at", { ascending: false }).limit(1) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const completedSet = new Set((progress ?? []).filter((p: any) => p.completed).map((p: any) => p.lesson_id));
+      return { course, allLessons, lesson, completedSet, questions: questions ?? [], lastAttempt: attempts?.[0] ?? null };
+    },
+  });
+
+  // Fetch signed playback URL only for video lessons
+  const { data: playback } = useQuery({
+    enabled: !!data && data.lesson.type === "video",
+    queryKey: ["playback", lessonId, user?.id],
+    queryFn: async () => fetchPlayback({ data: { lessonId } }),
+  });
 
   const [tab, setTab] = useState("content");
-  const [playing, setPlaying] = useState(false);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [score, setScore] = useState(0);
 
-  const score = (() => {
-    if (!quizSubmitted) return 0;
-    const correct = sampleQuiz.filter((q) => answers[q.id] === q.correctIndex).length;
-    return Math.round((correct / sampleQuiz.length) * 100);
-  })();
+  useEffect(() => { setTab("content"); setAnswers({}); setSubmitted(false); setScore(0); }, [lessonId]);
 
-  const submitQuiz = () => {
-    if (Object.keys(answers).length < sampleQuiz.length) return toast.error("Barcha savollarga javob bering");
-    setQuizSubmitted(true);
-    const correct = sampleQuiz.filter((q) => answers[q.id] === q.correctIndex).length;
-    const pct = Math.round((correct / sampleQuiz.length) * 100);
-    if (pct >= 80) toast.success(`Ajoyib! Siz ${pct}% to'pladingiz, keyingi darsga o'tishingiz mumkin`);
-    else toast.error(`Siz ${pct}% to'pladingiz. Kamida 80% kerak, qaytadan urinib ko'ring`);
+  if (isLoading || !data) return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
+  const { course, allLessons, lesson, completedSet, questions, lastAttempt } = data;
+  const idx = allLessons.findIndex((l: any) => l.id === lessonId);
+  const prev = idx > 0 ? allLessons[idx - 1] : null;
+  const next = idx < allLessons.length - 1 ? allLessons[idx + 1] : null;
+  const threshold = lesson.pass_threshold ?? 80;
+
+  const markCompleted = async () => {
+    if (completedSet.has(lesson.id)) return;
+    const { error } = await supabase.from("lesson_progress").upsert(
+      { user_id: user!.id, lesson_id: lesson.id, course_id: courseId, completed: true },
+      { onConflict: "user_id,lesson_id" },
+    );
+    if (error) toast.error(error.message);
+    else { toast.success("Dars yakunlandi"); qc.invalidateQueries({ queryKey: ["app", "lesson", lessonId] }); qc.invalidateQueries({ queryKey: ["app", "course", courseId] }); }
+  };
+
+  const submitQuiz = async () => {
+    if (Object.keys(answers).length < questions.length) return toast.error("Barcha savollarga javob bering");
+    const correct = questions.filter((q: any) => answers[q.id] === q.correct_index).length;
+    const pct = Math.round((correct / questions.length) * 100);
+    const passed = pct >= threshold;
+    setScore(pct); setSubmitted(true);
+    await supabase.from("quiz_attempts").insert({ user_id: user!.id, lesson_id: lesson.id, score: pct, passed, answers });
+    if (passed) {
+      await supabase.from("lesson_progress").upsert(
+        { user_id: user!.id, lesson_id: lesson.id, course_id: courseId, completed: true },
+        { onConflict: "user_id,lesson_id" },
+      );
+      qc.invalidateQueries({ queryKey: ["app", "course", courseId] });
+      toast.success(`Ajoyib! ${pct}% — keyingi darsga o'tishingiz mumkin`);
+    } else toast.error(`Siz ${pct}% to'pladingiz. Kamida ${threshold}% kerak.`);
   };
 
   const goNext = () => {
     if (next) navigate({ to: "/app/courses/$courseId/lessons/$lessonId", params: { courseId, lessonId: next.id } });
     else navigate({ to: "/app/courses/$courseId", params: { courseId } });
   };
+
+  const watermark = playback?.watermark ? maskPhone(playback.watermark) : "";
+  const lessonDone = completedSet.has(lesson.id);
 
   return (
     <>
@@ -84,81 +121,54 @@ function LessonPlayer() {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-4">
-            {/* Video player */}
-            <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
-              <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${course.cover})` }} />
-              <div className="absolute inset-0 grid place-items-center">
-                <button onClick={() => setPlaying(!playing)} className="grid h-20 w-20 place-items-center rounded-full bg-white/90 text-primary shadow-2xl transition-transform hover:scale-110">
-                  {playing ? <Pause className="h-8 w-8 fill-current" /> : <PlayCircle className="h-12 w-12 fill-current" />}
-                </button>
-              </div>
-              {/* Watermark — download protection */}
-              <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/40 px-2 py-1 text-xs text-white/70 backdrop-blur-sm">
-                +998 90 *** ** 67
-              </div>
-              {/* Controls */}
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                <div className="h-1 rounded-full bg-white/20">
-                  <div className="h-full w-1/3 rounded-full bg-primary-glow" />
-                </div>
-                <div className="mt-2 flex items-center gap-3 text-white">
-                  <button onClick={() => setPlaying(!playing)}>{playing ? <Pause className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}</button>
-                  <span className="text-xs">04:12 / {lesson.duration}</span>
-                  <div className="ml-auto flex items-center gap-3">
-                    <Volume2 className="h-4 w-4" />
-                    <SettingsIcon className="h-4 w-4" />
-                    <Maximize2 className="h-4 w-4" />
+            {lesson.type === "video" && (
+              <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
+                {playback?.embedUrl ? (
+                  <iframe
+                    src={playback.embedUrl}
+                    title={lesson.title}
+                    className="absolute inset-0 h-full w-full"
+                    loading="lazy"
+                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center text-white/60">Video tayyorlanmoqda...</div>
+                )}
+                {watermark && (
+                  <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/50 px-2 py-1 text-xs text-white/80 backdrop-blur-sm">
+                    {watermark}
                   </div>
-                </div>
+                )}
               </div>
-            </div>
+            )}
 
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">{lesson.moduleTitle}</Badge>
-                <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" /> Himoyalangan</Badge>
+                {lesson.type === "video" && <Badge variant="outline" className="gap-1"><ShieldCheck className="h-3 w-3" /> Himoyalangan</Badge>}
+                {lessonDone && <Badge className="bg-success text-success-foreground"><CheckCircle2 className="mr-1 h-3 w-3" /> Yakunlangan</Badge>}
               </div>
               <h1 className="mt-2 font-display text-2xl font-bold lg:text-3xl">{lesson.title}</h1>
-              <p className="mt-2 text-muted-foreground">{lesson.description}</p>
+              {lesson.description && <p className="mt-2 text-muted-foreground">{lesson.description}</p>}
             </div>
 
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList>
                 <TabsTrigger value="content">Tavsif</TabsTrigger>
-                <TabsTrigger value="materials">Materiallar</TabsTrigger>
-                {lesson.hasQuiz && <TabsTrigger value="quiz">Test</TabsTrigger>}
+                {lesson.has_quiz && <TabsTrigger value="quiz">Test</TabsTrigger>}
               </TabsList>
               <TabsContent value="content" className="mt-4">
                 <Card><CardContent className="prose prose-sm max-w-none p-6">
-                  <p>Bu darsda biz <strong>{lesson.title}</strong> mavzusini batafsil ko'rib chiqamiz. Quyidagi mavzular qamrab olinadi:</p>
-                  <ul>
-                    <li>Asosiy tushunchalar va terminologiya</li>
-                    <li>Amaliy misollar bilan tushuntirish</li>
-                    <li>Eng ko'p uchraydigan xatolar</li>
-                    <li>Best practices va tavsiyalar</li>
-                  </ul>
-                  <p>Darsdan keyin {lesson.hasQuiz ? "amaliy test bor, 80% va undan yuqori ball kerak" : "keyingi darsga o'tishingiz mumkin"}.</p>
+                  <p>{lesson.description || `Bu darsda "${lesson.title}" mavzusi ko'rib chiqiladi.`}</p>
+                  <p>{lesson.has_quiz ? `Darsdan keyin test bor — kamida ${threshold}% kerak.` : "Darsni yakunlagach keyingi darsga o'ting."}</p>
+                  {!lesson.has_quiz && !lessonDone && (
+                    <Button onClick={markCompleted} className="mt-2"><CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash</Button>
+                  )}
                 </CardContent></Card>
               </TabsContent>
-              <TabsContent value="materials" className="mt-4">
-                <Card><CardContent className="space-y-2 p-6">
-                  {[
-                    { name: "Dars slaydlari.pdf", type: "Prezentatsiya" },
-                    { name: "Manba kodlari.zip", type: "Kod" },
-                    { name: "Qo'shimcha o'qish.pdf", type: "Material" },
-                  ].map((f) => (
-                    <div key={f.name} className="flex items-center gap-3 rounded-lg border p-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div className="flex-1"><div className="text-sm font-medium">{f.name}</div><div className="text-xs text-muted-foreground">{f.type}</div></div>
-                      <Button size="sm" variant="outline" onClick={() => toast.info("Material onlayn ko'rinadi, yuklab olish o'chirilgan")}>Ko'rish</Button>
-                    </div>
-                  ))}
-                  <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-xs text-muted-foreground">
-                    <ShieldCheck className="mr-1 inline h-3.5 w-3.5" /> Materiallarni yuklab olish texnik jihatdan to'sib qo'yilgan
-                  </div>
-                </CardContent></Card>
-              </TabsContent>
-              {lesson.hasQuiz && (
+
+              {lesson.has_quiz && (
                 <TabsContent value="quiz" className="mt-4">
                   <Card>
                     <CardContent className="space-y-6 p-6">
@@ -166,23 +176,34 @@ function LessonPlayer() {
                         <div className="grid h-12 w-12 place-items-center rounded-lg bg-primary/10 text-primary"><ListChecks className="h-6 w-6" /></div>
                         <div>
                           <h3 className="font-display text-lg font-semibold">Dars yakunidagi test</h3>
-                          <p className="text-sm text-muted-foreground">Keyingi darsga o'tish uchun 80%+ ball to'plang</p>
+                          <p className="text-sm text-muted-foreground">Keyingi darsga o'tish uchun {threshold}%+ ball to'plang</p>
                         </div>
                       </div>
-                      {quizSubmitted && (
-                        <div className={`rounded-lg p-4 ${score >= 80 ? "bg-success/10 text-success-foreground border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}>
+
+                      {questions.length === 0 && (
+                        <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">Test savollari hali qo'shilmagan.</div>
+                      )}
+
+                      {submitted && (
+                        <div className={`rounded-lg p-4 ${score >= threshold ? "bg-success/10 border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}>
                           <div className="font-display text-2xl font-bold">{score}%</div>
-                          <div className="text-sm">{score >= 80 ? "Ajoyib! Keyingi darsga o'tishingiz mumkin" : "Kamida 80% kerak. Qaytadan urinib ko'ring."}</div>
+                          <div className="text-sm">{score >= threshold ? "Ajoyib! Keyingi darsga o'ting." : `Kamida ${threshold}% kerak.`}</div>
                         </div>
                       )}
-                      {sampleQuiz.map((q, qi) => (
+                      {!submitted && lastAttempt && (
+                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                          Oxirgi urinish: <strong>{lastAttempt.score}%</strong> {lastAttempt.passed ? "✅" : "❌"}
+                        </div>
+                      )}
+
+                      {questions.map((q: any, qi: number) => (
                         <div key={q.id} className="space-y-3">
                           <div className="font-medium">{qi + 1}. {q.question}</div>
-                          <RadioGroup value={answers[q.id]?.toString()} onValueChange={(v) => setAnswers({ ...answers, [q.id]: Number(v) })} disabled={quizSubmitted}>
-                            {q.options.map((opt, oi) => {
+                          <RadioGroup value={answers[q.id]?.toString()} onValueChange={(v) => setAnswers({ ...answers, [q.id]: Number(v) })} disabled={submitted}>
+                            {(q.options as string[]).map((opt: string, oi: number) => {
                               const selected = answers[q.id] === oi;
-                              const correct = quizSubmitted && oi === q.correctIndex;
-                              const wrong = quizSubmitted && selected && oi !== q.correctIndex;
+                              const correct = submitted && oi === q.correct_index;
+                              const wrong = submitted && selected && oi !== q.correct_index;
                               return (
                                 <div key={oi} className={`flex items-center gap-3 rounded-lg border p-3 ${correct ? "border-success bg-success/10" : wrong ? "border-destructive bg-destructive/10" : ""}`}>
                                   <RadioGroupItem value={oi.toString()} id={`${q.id}-${oi}`} />
@@ -193,27 +214,29 @@ function LessonPlayer() {
                           </RadioGroup>
                         </div>
                       ))}
-                      <div className="flex gap-3">
-                        {!quizSubmitted ? (
-                          <Button onClick={submitQuiz} size="lg">Testni topshirish</Button>
-                        ) : score >= 80 ? (
-                          <Button onClick={goNext} size="lg">Keyingi darsga o'tish <ChevronRight className="ml-1 h-4 w-4" /></Button>
-                        ) : (
-                          <Button onClick={() => { setQuizSubmitted(false); setAnswers({}); }} size="lg" variant="outline">Qaytadan urinish</Button>
-                        )}
-                      </div>
+
+                      {questions.length > 0 && (
+                        <div className="flex gap-3">
+                          {!submitted ? (
+                            <Button onClick={submitQuiz} size="lg">Testni topshirish</Button>
+                          ) : score >= threshold ? (
+                            <Button onClick={goNext} size="lg">Keyingi darsga o'tish <ChevronRight className="ml-1 h-4 w-4" /></Button>
+                          ) : (
+                            <Button onClick={() => { setSubmitted(false); setAnswers({}); }} size="lg" variant="outline">Qaytadan urinish</Button>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
               )}
             </Tabs>
 
-            {/* Bottom nav */}
             <div className="flex items-center justify-between border-t pt-4">
               <Button variant="outline" disabled={!prev} onClick={() => prev && navigate({ to: "/app/courses/$courseId/lessons/$lessonId", params: { courseId, lessonId: prev.id } })}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> Oldingi
               </Button>
-              {lesson.hasQuiz && !lesson.completed ? (
+              {lesson.has_quiz && !lessonDone ? (
                 <Button onClick={() => setTab("quiz")}>Test ishlash</Button>
               ) : (
                 <Button onClick={goNext} disabled={!next}>Keyingi <ChevronRight className="ml-1 h-4 w-4" /></Button>
@@ -221,18 +244,18 @@ function LessonPlayer() {
             </div>
           </div>
 
-          {/* Sidebar: course outline */}
           <aside className="space-y-3">
             <Card>
               <CardContent className="p-4">
                 <h3 className="mb-3 font-display font-semibold">Kurs darslari</h3>
                 <div className="space-y-4">
-                  {course.modules.map((m) => (
+                  {course.modules.map((m: any) => (
                     <div key={m.id}>
                       <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">{m.title}</div>
                       <ul className="space-y-1">
-                        {m.lessons.map((l) => {
+                        {m.lessons.map((l: any) => {
                           const active = l.id === lessonId;
+                          const done = completedSet.has(l.id);
                           return (
                             <li key={l.id}>
                               <Link
@@ -240,9 +263,8 @@ function LessonPlayer() {
                                 params={{ courseId, lessonId: l.id }}
                                 className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
                               >
-                                {l.completed ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 flex-shrink-0 opacity-60" />}
+                                {done ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 flex-shrink-0 opacity-60" />}
                                 <span className="flex-1 truncate">{l.title}</span>
-                                <span className="text-xs opacity-70">{l.duration}</span>
                               </Link>
                             </li>
                           );
@@ -258,4 +280,10 @@ function LessonPlayer() {
       </main>
     </>
   );
+}
+
+function maskPhone(s: string) {
+  const digits = s.replace(/\D+/g, "");
+  if (digits.length < 7) return s;
+  return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} *** ** ${digits.slice(-2)}`;
 }
