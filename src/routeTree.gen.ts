@@ -26,9 +26,9 @@ import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AppCoursesIndexRouteImport } from './routes/app.courses.index'
 import { Route as AdminCoursesIndexRouteImport } from './routes/admin.courses.index'
-import { Route as AppCoursesCourseIdRouteImport } from './routes/app.courses.$courseId'
 import { Route as AdminCoursesNewRouteImport } from './routes/admin.courses.new'
 import { Route as AdminCoursesCourseIdRouteImport } from './routes/admin.courses.$courseId'
+import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/app.courses.$courseId.index'
 import { Route as AppCoursesCourseIdLessonsLessonIdRouteImport } from './routes/app.courses.$courseId.lessons.$lessonId'
 
 const AuthRoute = AuthRouteImport.update({
@@ -116,11 +116,6 @@ const AdminCoursesIndexRoute = AdminCoursesIndexRouteImport.update({
   path: '/courses/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AppCoursesCourseIdRoute = AppCoursesCourseIdRouteImport.update({
-  id: '/courses/$courseId',
-  path: '/courses/$courseId',
-  getParentRoute: () => AppRoute,
-} as any)
 const AdminCoursesNewRoute = AdminCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
@@ -131,11 +126,16 @@ const AdminCoursesCourseIdRoute = AdminCoursesCourseIdRouteImport.update({
   path: '/courses/$courseId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AppCoursesCourseIdIndexRoute = AppCoursesCourseIdIndexRouteImport.update({
+  id: '/courses/$courseId/',
+  path: '/courses/$courseId/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesCourseIdLessonsLessonIdRoute =
   AppCoursesCourseIdLessonsLessonIdRouteImport.update({
-    id: '/lessons/$lessonId',
-    path: '/lessons/$lessonId',
-    getParentRoute: () => AppCoursesCourseIdRoute,
+    id: '/courses/$courseId/lessons/$lessonId',
+    path: '/courses/$courseId/lessons/$lessonId',
+    getParentRoute: () => AppRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -156,9 +156,9 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/app/courses/': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesByTo {
@@ -177,9 +177,9 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/admin/courses': typeof AdminCoursesIndexRoute
   '/app/courses': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
   '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesById {
@@ -201,9 +201,9 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/app/courses/': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId/': typeof AppCoursesCourseIdIndexRoute
   '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRouteTypes {
@@ -226,9 +226,9 @@ export interface FileRouteTypes {
     | '/app/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
-    | '/app/courses/$courseId'
     | '/admin/courses/'
     | '/app/courses/'
+    | '/app/courses/$courseId/'
     | '/app/courses/$courseId/lessons/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -247,9 +247,9 @@ export interface FileRouteTypes {
     | '/app'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
-    | '/app/courses/$courseId'
     | '/admin/courses'
     | '/app/courses'
+    | '/app/courses/$courseId'
     | '/app/courses/$courseId/lessons/$lessonId'
   id:
     | '__root__'
@@ -270,9 +270,9 @@ export interface FileRouteTypes {
     | '/app/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
-    | '/app/courses/$courseId'
     | '/admin/courses/'
     | '/app/courses/'
+    | '/app/courses/$courseId/'
     | '/app/courses/$courseId/lessons/$lessonId'
   fileRoutesById: FileRoutesById
 }
@@ -404,13 +404,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoursesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/app/courses/$courseId': {
-      id: '/app/courses/$courseId'
-      path: '/courses/$courseId'
-      fullPath: '/app/courses/$courseId'
-      preLoaderRoute: typeof AppCoursesCourseIdRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/admin/courses/new': {
       id: '/admin/courses/new'
       path: '/courses/new'
@@ -425,12 +418,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCoursesCourseIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/app/courses/$courseId/': {
+      id: '/app/courses/$courseId/'
+      path: '/courses/$courseId'
+      fullPath: '/app/courses/$courseId/'
+      preLoaderRoute: typeof AppCoursesCourseIdIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/courses/$courseId/lessons/$lessonId': {
       id: '/app/courses/$courseId/lessons/$lessonId'
-      path: '/lessons/$lessonId'
+      path: '/courses/$courseId/lessons/$lessonId'
       fullPath: '/app/courses/$courseId/lessons/$lessonId'
       preLoaderRoute: typeof AppCoursesCourseIdLessonsLessonIdRouteImport
-      parentRoute: typeof AppCoursesCourseIdRoute
+      parentRoute: typeof AppRoute
     }
   }
 }
@@ -459,25 +459,14 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface AppCoursesCourseIdRouteChildren {
-  AppCoursesCourseIdLessonsLessonIdRoute: typeof AppCoursesCourseIdLessonsLessonIdRoute
-}
-
-const AppCoursesCourseIdRouteChildren: AppCoursesCourseIdRouteChildren = {
-  AppCoursesCourseIdLessonsLessonIdRoute:
-    AppCoursesCourseIdLessonsLessonIdRoute,
-}
-
-const AppCoursesCourseIdRouteWithChildren =
-  AppCoursesCourseIdRoute._addFileChildren(AppCoursesCourseIdRouteChildren)
-
 interface AppRouteChildren {
   AppFeedbackRoute: typeof AppFeedbackRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSubscriptionRoute: typeof AppSubscriptionRoute
   AppIndexRoute: typeof AppIndexRoute
-  AppCoursesCourseIdRoute: typeof AppCoursesCourseIdRouteWithChildren
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
+  AppCoursesCourseIdIndexRoute: typeof AppCoursesCourseIdIndexRoute
+  AppCoursesCourseIdLessonsLessonIdRoute: typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -485,8 +474,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppProfileRoute: AppProfileRoute,
   AppSubscriptionRoute: AppSubscriptionRoute,
   AppIndexRoute: AppIndexRoute,
-  AppCoursesCourseIdRoute: AppCoursesCourseIdRouteWithChildren,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
+  AppCoursesCourseIdIndexRoute: AppCoursesCourseIdIndexRoute,
+  AppCoursesCourseIdLessonsLessonIdRoute:
+    AppCoursesCourseIdLessonsLessonIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -512,3 +503,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
