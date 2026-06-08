@@ -56,10 +56,11 @@ function LessonPlayer() {
   });
 
   // Fetch signed playback URL only for video lessons
-  const { data: playback } = useQuery({
+  const { data: playback, error: playbackError, isLoading: playbackLoading } = useQuery({
     enabled: !!data && data.lesson.type === "video",
     queryKey: ["playback", lessonId, user?.id],
     queryFn: async () => fetchPlayback({ data: { lessonId } }),
+    retry: false,
   });
 
   const [tab, setTab] = useState("content");
@@ -132,8 +133,14 @@ function LessonPlayer() {
                     allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
                     allowFullScreen
                   />
+                ) : playbackError ? (
+                  <div className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-300">
+                    Video yuklab bo'lmadi: {(playbackError as Error).message}
+                  </div>
+                ) : playbackLoading ? (
+                  <div className="absolute inset-0 grid place-items-center text-white/60">Video yuklanmoqda...</div>
                 ) : (
-                  <div className="absolute inset-0 grid place-items-center text-white/60">Video tayyorlanmoqda...</div>
+                  <div className="absolute inset-0 grid place-items-center text-white/60">Video mavjud emas</div>
                 )}
                 {watermark && (
                   <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/50 px-2 py-1 text-xs text-white/80 backdrop-blur-sm">
