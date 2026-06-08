@@ -19,37 +19,31 @@ export type Database = {
           course_id: string
           created_at: string
           description: string | null
-          file_name: string | null
-          file_type: string
           id: string
           position: number
+          slides: string[]
           title: string
           updated_at: string
-          url: string
         }
         Insert: {
           course_id: string
           created_at?: string
           description?: string | null
-          file_name?: string | null
-          file_type: string
           id?: string
           position?: number
+          slides?: string[]
           title: string
           updated_at?: string
-          url: string
         }
         Update: {
           course_id?: string
           created_at?: string
           description?: string | null
-          file_name?: string | null
-          file_type?: string
           id?: string
           position?: number
+          slides?: string[]
           title?: string
           updated_at?: string
-          url?: string
         }
         Relationships: [
           {
@@ -236,9 +230,7 @@ export type Database = {
           module_id: string
           pass_threshold: number
           position: number
-          presentation_name: string | null
-          presentation_type: string | null
-          presentation_url: string | null
+          presentation_slides: string[]
           title: string
           type: Database["public"]["Enums"]["lesson_type"]
           updated_at: string
@@ -256,9 +248,7 @@ export type Database = {
           module_id: string
           pass_threshold?: number
           position?: number
-          presentation_name?: string | null
-          presentation_type?: string | null
-          presentation_url?: string | null
+          presentation_slides?: string[]
           title: string
           type?: Database["public"]["Enums"]["lesson_type"]
           updated_at?: string
@@ -276,9 +266,7 @@ export type Database = {
           module_id?: string
           pass_threshold?: number
           position?: number
-          presentation_name?: string | null
-          presentation_type?: string | null
-          presentation_url?: string | null
+          presentation_slides?: string[]
           title?: string
           type?: Database["public"]["Enums"]["lesson_type"]
           updated_at?: string

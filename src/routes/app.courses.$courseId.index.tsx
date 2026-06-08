@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { PresentationViewer } from "@/components/presentation-viewer";
+import { PresentationSlidesViewer } from "@/components/presentation-viewer";
 
 export const Route = createFileRoute("/app/courses/$courseId/")({
   component: CourseDetail,
@@ -215,6 +215,7 @@ function CourseDetail() {
 
 function CoursePresentationCard({ item }: { item: any }) {
   const [open, setOpen] = useState(false);
+  const slides: string[] = Array.isArray(item.slides) ? item.slides : [];
   return (
     <Card>
       <CardContent className="space-y-3 p-4">
@@ -224,12 +225,12 @@ function CoursePresentationCard({ item }: { item: any }) {
             <div className="font-display font-semibold">{item.title}</div>
             {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
           </div>
-          <Badge variant="outline" className="uppercase">{item.file_type}</Badge>
-          <Button size="sm" variant={open ? "outline" : "default"} onClick={() => setOpen((v) => !v)}>
+          <Badge variant="outline">{slides.length} slayd</Badge>
+          <Button size="sm" variant={open ? "outline" : "default"} disabled={!slides.length} onClick={() => setOpen((v) => !v)}>
             {open ? "Yopish" : "Ochish"}
           </Button>
         </div>
-        {open && <PresentationViewer url={item.url} type={item.file_type} name={item.file_name} title={item.title} />}
+        {open && slides.length > 0 && <PresentationSlidesViewer slides={slides} title={item.title} />}
       </CardContent>
     </Card>
   );
