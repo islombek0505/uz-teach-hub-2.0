@@ -7,6 +7,7 @@ import {
   User,
   LogOut,
   GraduationCap,
+  UserCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -21,8 +22,11 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
-const items = [
+const baseItems = [
   { title: "Bosh sahifa", url: "/app", icon: LayoutDashboard },
   { title: "Kurslarim", url: "/app/courses", icon: BookOpen },
   { title: "Obuna va to'lov", url: "/app/subscription", icon: CreditCard },
@@ -33,6 +37,25 @@ const items = [
 export function StudentSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isMentor, setIsMentor] = useState(false);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .then(({ data }) => setIsMentor((data ?? []).some((r: any) => r.role === "mentor")));
+  }, [user?.id]);
+
+  const items = isMentor
+    ? [
+        ...baseItems.slice(0, 2),
+        { title: "Mentor paneli", url: "/app/mentor", icon: UserCheck },
+        ...baseItems.slice(2),
+      ]
+    : baseItems;
+
   const handleLogout = async () => {
     await signOut();
     navigate({ to: "/auth/login" });

@@ -64,7 +64,7 @@ function CourseDetail() {
       if (subFull?.mentor_id) {
         const { data: mp } = await supabase
           .from("profiles")
-          .select("id, full_name, telegram_url, instagram_url, phone")
+          .select("id, full_name, telegram_url, instagram_url, phone, bio, headline, expertise, experience_years")
           .eq("id", subFull.mentor_id)
           .maybeSingle();
         mentor = mp ?? null;
@@ -145,23 +145,40 @@ function CourseDetail() {
                   <div className="font-display font-semibold">Mentor yordami bilan o'rganmoqdasiz</div>
                 </div>
                 {mentor ? (
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="font-medium">{mentor.full_name || "Mentor"}</div>
-                      <div className="text-xs text-muted-foreground">Savol bo'lsa, to'g'ridan-to'g'ri bog'laning</div>
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="font-medium">{mentor.full_name || "Mentor"}</div>
+                        {mentor.headline && (
+                          <div className="text-xs text-muted-foreground">{mentor.headline}</div>
+                        )}
+                        {mentor.experience_years != null && (
+                          <div className="text-xs text-muted-foreground">Tajriba: {mentor.experience_years} yil</div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {mentor.telegram_url && (
+                          <Button asChild size="sm" variant="outline">
+                            <a href={mentor.telegram_url} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" /> Telegram</a>
+                          </Button>
+                        )}
+                        {mentor.instagram_url && (
+                          <Button asChild size="sm" variant="outline">
+                            <a href={mentor.instagram_url} target="_blank" rel="noreferrer"><Instagram className="mr-1 h-3.5 w-3.5" /> Instagram</a>
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {mentor.telegram_url && (
-                        <Button asChild size="sm" variant="outline">
-                          <a href={mentor.telegram_url} target="_blank" rel="noreferrer"><Send className="mr-1 h-3.5 w-3.5" /> Telegram</a>
-                        </Button>
-                      )}
-                      {mentor.instagram_url && (
-                        <Button asChild size="sm" variant="outline">
-                          <a href={mentor.instagram_url} target="_blank" rel="noreferrer"><Instagram className="mr-1 h-3.5 w-3.5" /> Instagram</a>
-                        </Button>
-                      )}
-                    </div>
+                    {mentor.bio && (
+                      <p className="text-sm text-muted-foreground">{mentor.bio}</p>
+                    )}
+                    {Array.isArray(mentor.expertise) && mentor.expertise.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {mentor.expertise.map((x: string) => (
+                          <Badge key={x} variant="secondary" className="text-[10px]">{x}</Badge>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="mt-2 text-sm text-muted-foreground">Mentor tez orada biriktiriladi. Admin tasdiqlagach kontaktlar shu yerda paydo bo'ladi.</p>
