@@ -169,6 +169,8 @@ function EditCourse() {
             ))}
           </Accordion>
         </div>
+
+        <CoursePresentationsManager courseId={courseId} />
       </main>
     </>
   );
