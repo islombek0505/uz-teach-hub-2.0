@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Download, Presentation } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Eye, Presentation } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -340,19 +340,35 @@ function maskPhone(s: string) {
 }
 
 function MaterialItem({ material }: { material: any }) {
-  const open = async () => {
-    const { data, error } = await supabase.storage.from("materials").createSignedUrl(material.storage_path, 60 * 10);
-    if (error || !data) return toast.error("Faylni ochib bo'lmadi");
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-  };
+  const [open, setOpen] = useState(false);
   return (
-    <button type="button" onClick={open} className="flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors hover:bg-muted/50">
-      <Paperclip className="h-4 w-4 text-primary" />
-      <div className="flex-1">
-        <div className="text-sm font-medium">{material.name}</div>
-        <div className="text-xs text-muted-foreground">{material.mime_type ?? ""} {material.size_bytes ? `• ${Math.round(material.size_bytes / 1024)} KB` : ""}</div>
-      </div>
-      <Download className="h-4 w-4 text-muted-foreground" />
-    </button>
+    <div className="rounded-md border">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted/50"
+      >
+        <Paperclip className="h-4 w-4 text-primary" />
+        <div className="flex-1">
+          <div className="text-sm font-medium">{material.name}</div>
+          <div className="text-xs text-muted-foreground">
+            {material.mime_type ?? ""} {material.size_bytes ? `• ${Math.round(material.size_bytes / 1024)} KB` : ""}
+          </div>
+        </div>
+        <Eye className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">{open ? "Yopish" : "Ko'rish"}</span>
+      </button>
+      {open && (
+        <div className="border-t p-3">
+          <PresentationViewer
+            bucket="materials"
+            url={material.storage_path}
+            type={material.mime_type}
+            name={material.name}
+            title={material.name}
+          />
+        </div>
+      )}
+    </div>
   );
 }
