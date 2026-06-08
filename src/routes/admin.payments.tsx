@@ -6,58 +6,76 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { mockPayments, formatPrice } from "@/lib/mock-data";
-import { Plus, CheckCircle2, X, Eye } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/payments")({
   component: AdminPayments,
 });
 
+const fmt = (n: number) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
+
 function AdminPayments() {
   const [filter, setFilter] = useState<string>("all");
-  const list = filter === "all" ? mockPayments : mockPayments.filter(p => p.status === filter);
+  const qc = useQueryClient();
+
+  const { data: payments = [], isLoading } = useQuery({
+    queryKey: ["admin", "payments"],
+    queryFn: async () => {
+      const { data: pays, error } = await supabase
+        .from("payments")
+        .select("*, courses(title)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const userIds = Array.from(new Set((pays ?? []).map((p) => p.user_id)));
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, phone").in("id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
+      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+      return (pays ?? []).map((p: any) => ({ ...p, profile: pmap.get(p.user_id) }));
+    },
+  });
+
+  const list = filter === "all" ? payments : payments.filter((p: any) => p.status === filter);
+
+  const approve = useMutation({
+    mutationFn: async (p: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: e1 } = await supabase.from("payments").update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", p.id);
+      if (e1) throw e1;
+      const expires = new Date(); expires.setMonth(expires.getMonth() + 1);
+      const { error: e2 } = await supabase.from("subscriptions").upsert(
+        { user_id: p.user_id, course_id: p.course_id, payment_id: p.id, active: true, expires_at: expires.toISOString() },
+        { onConflict: "user_id,course_id" },
+      );
+      if (e2) throw e2;
+    },
+    onSuccess: () => { toast.success("Tasdiqlandi va obuna faollashtirildi"); qc.invalidateQueries({ queryKey: ["admin", "payments"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const reject = useMutation({
+    mutationFn: async (p: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase.from("payments").update({ status: "rejected", reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", p.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Rad etildi"); qc.invalidateQueries({ queryKey: ["admin", "payments"] }); },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <>
       <Topbar title="To'lovlar boshqaruvi" initials="AD" />
       <main className="flex-1 space-y-6 p-4 lg:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Tabs value={filter} onValueChange={setFilter}>
-            <TabsList>
-              <TabsTrigger value="all">Hammasi</TabsTrigger>
-              <TabsTrigger value="pending">Kutilmoqda</TabsTrigger>
-              <TabsTrigger value="approved">Tasdiqlangan</TabsTrigger>
-              <TabsTrigger value="expired">Tugagan</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <Dialog>
-            <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> Yangi to'lov</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle className="font-display">Qo'lda to'lov qo'shish</DialogTitle>
-                <DialogDescription>O'quvchidan kelgan to'lovni ro'yxatdan o'tkazing va tasdiqlang</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2"><Label>O'quvchi (telefon)</Label><Input placeholder="+998 90 123 45 67" /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2"><Label>Summa (so'm)</Label><Input type="number" defaultValue={299000} /></div>
-                  <div className="space-y-2"><Label>To'lov usuli</Label><Input placeholder="Humo / Uzcard" /></div>
-                </div>
-                <div className="space-y-2"><Label>Sana</Label><Input type="date" /></div>
-                <div className="space-y-2"><Label>Eslatma (ixtiyoriy)</Label><Textarea rows={3} placeholder="Telegram orqali tasdiqlandi..." /></div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => toast.success("To'lov qo'shildi va obuna faollashtirildi")}>Saqlash va tasdiqlash</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Tabs value={filter} onValueChange={setFilter}>
+          <TabsList>
+            <TabsTrigger value="all">Hammasi</TabsTrigger>
+            <TabsTrigger value="pending">Kutilmoqda</TabsTrigger>
+            <TabsTrigger value="approved">Tasdiqlangan</TabsTrigger>
+            <TabsTrigger value="rejected">Rad etilgan</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         <Card>
           <CardContent className="p-0">
@@ -65,36 +83,36 @@ function AdminPayments() {
               <TableHeader>
                 <TableRow>
                   <TableHead>O'quvchi</TableHead>
+                  <TableHead>Kurs</TableHead>
                   <TableHead>Summa</TableHead>
-                  <TableHead>Usul</TableHead>
                   <TableHead>Sana</TableHead>
                   <TableHead>Holat</TableHead>
                   <TableHead className="w-32">Amallar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {list.map((p) => (
+                {isLoading && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">Yuklanmoqda...</TableCell></TableRow>}
+                {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">To'lovlar yo'q</TableCell></TableRow>}
+                {list.map((p: any) => (
                   <TableRow key={p.id}>
                     <TableCell>
-                      <div className="font-medium">{p.studentName}</div>
-                      <div className="text-xs text-muted-foreground">{p.phone}</div>
+                      <div className="font-medium">{p.profile?.full_name ?? p.payer_name ?? "—"}</div>
+                      <div className="text-xs text-muted-foreground">{p.profile?.phone ?? p.payer_phone ?? "—"}</div>
                     </TableCell>
-                    <TableCell className="font-display font-semibold">{formatPrice(p.amount)}</TableCell>
-                    <TableCell className="text-sm">{p.method}</TableCell>
-                    <TableCell className="text-sm">{p.date}</TableCell>
+                    <TableCell className="text-sm">{p.courses?.title ?? "—"}</TableCell>
+                    <TableCell className="font-display font-semibold">{fmt(Number(p.amount))}</TableCell>
+                    <TableCell className="text-sm">{new Date(p.created_at).toLocaleDateString("uz-UZ")}</TableCell>
                     <TableCell>
                       {p.status === "approved" && <Badge className="bg-success text-success-foreground">Tasdiqlangan</Badge>}
                       {p.status === "pending" && <Badge className="bg-warning text-warning-foreground">Kutilmoqda</Badge>}
-                      {p.status === "expired" && <Badge variant="destructive">Tugagan</Badge>}
+                      {p.status === "rejected" && <Badge variant="destructive">Rad etilgan</Badge>}
                     </TableCell>
                     <TableCell>
-                      {p.status === "pending" ? (
+                      {p.status === "pending" && (
                         <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="text-success" onClick={() => toast.success("Tasdiqlandi")}><CheckCircle2 className="h-4 w-4" /></Button>
-                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => toast.error("Rad etildi")}><X className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" className="text-success" onClick={() => approve.mutate(p)} disabled={approve.isPending}><CheckCircle2 className="h-4 w-4" /></Button>
+                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => reject.mutate(p)} disabled={reject.isPending}><X className="h-4 w-4" /></Button>
                         </div>
-                      ) : (
-                        <Button size="icon" variant="ghost"><Eye className="h-4 w-4" /></Button>
                       )}
                     </TableCell>
                   </TableRow>
