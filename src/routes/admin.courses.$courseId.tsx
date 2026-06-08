@@ -18,7 +18,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { createBunnyVideo, deleteBunnyVideo } from "@/lib/bunny.functions";
-import * as tus from "tus-js-client";
 
 export const Route = createFileRoute("/admin/courses/$courseId")({
   component: EditCourse,
