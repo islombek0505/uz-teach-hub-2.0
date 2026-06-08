@@ -321,3 +321,21 @@ function maskPhone(s: string) {
   if (digits.length < 7) return s;
   return `+${digits.slice(0, 3)} ${digits.slice(3, 5)} *** ** ${digits.slice(-2)}`;
 }
+
+function MaterialItem({ material }: { material: any }) {
+  const open = async () => {
+    const { data, error } = await supabase.storage.from("materials").createSignedUrl(material.storage_path, 60 * 10);
+    if (error || !data) return toast.error("Faylni ochib bo'lmadi");
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+  return (
+    <button type="button" onClick={open} className="flex w-full items-center gap-3 rounded-md border p-3 text-left transition-colors hover:bg-muted/50">
+      <Paperclip className="h-4 w-4 text-primary" />
+      <div className="flex-1">
+        <div className="text-sm font-medium">{material.name}</div>
+        <div className="text-xs text-muted-foreground">{material.mime_type ?? ""} {material.size_bytes ? `• ${Math.round(material.size_bytes / 1024)} KB` : ""}</div>
+      </div>
+      <Download className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
+}
