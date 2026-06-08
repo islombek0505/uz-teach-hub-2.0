@@ -339,6 +339,21 @@ function maskPhone(s: string) {
 
 function MaterialItem({ material }: { material: any }) {
   const [open, setOpen] = useState(false);
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open || url) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.storage.from("materials").createSignedUrl(material.storage_path, 60 * 60);
+      if (!cancelled) setUrl(data?.signedUrl ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [open, url, material.storage_path]);
+
+  const mime = (material.mime_type ?? "").toLowerCase();
+  const isImage = mime.startsWith("image/");
+  const isPdf = mime.includes("pdf");
+
   return (
     <div className="rounded-md border">
       <button
@@ -357,14 +372,18 @@ function MaterialItem({ material }: { material: any }) {
         <span className="text-xs text-muted-foreground">{open ? "Yopish" : "Ko'rish"}</span>
       </button>
       {open && (
-        <div className="border-t p-3">
-          <PresentationViewer
-            bucket="materials"
-            url={material.storage_path}
-            type={material.mime_type}
-            name={material.name}
-            title={material.name}
-          />
+        <div className="border-t p-3" onContextMenu={(e) => e.preventDefault()}>
+          {!url ? (
+            <div className="grid aspect-video place-items-center text-sm text-muted-foreground">Yuklanmoqda...</div>
+          ) : isImage ? (
+            <img src={url} alt={material.name} draggable={false} className="mx-auto max-h-[70vh] w-full select-none object-contain" />
+          ) : isPdf ? (
+            <iframe src={`${url}#toolbar=0&navpanes=0`} title={material.name} className="block h-[70vh] w-full bg-white" />
+          ) : (
+            <div className="rounded-md border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+              Bu fayl turi sahifada ko'rsatilmaydi. Yuklab olish ham yopilgan.
+            </div>
+          )}
         </div>
       )}
     </div>
