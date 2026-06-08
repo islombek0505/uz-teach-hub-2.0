@@ -62,7 +62,6 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          mode: Database["public"]["Enums"]["course_mode"]
           price: number
           published: boolean
           title: string
@@ -74,7 +73,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          mode?: Database["public"]["Enums"]["course_mode"]
           price?: number
           published?: boolean
           title: string
@@ -86,7 +84,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          mode?: Database["public"]["Enums"]["course_mode"]
           price?: number
           published?: boolean
           title?: string
@@ -334,6 +331,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["payment_status"]
+          tariff: Database["public"]["Enums"]["course_tariff"]
           updated_at: string
           user_id: string
         }
@@ -350,6 +348,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          tariff?: Database["public"]["Enums"]["course_tariff"]
           updated_at?: string
           user_id: string
         }
@@ -366,6 +365,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
+          tariff?: Database["public"]["Enums"]["course_tariff"]
           updated_at?: string
           user_id?: string
         }
@@ -388,7 +388,9 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          instagram_url: string | null
           phone: string | null
+          telegram_url: string | null
           updated_at: string
         }
         Insert: {
@@ -399,7 +401,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          instagram_url?: string | null
           phone?: string | null
+          telegram_url?: string | null
           updated_at?: string
         }
         Update: {
@@ -410,7 +414,9 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          instagram_url?: string | null
           phone?: string | null
+          telegram_url?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -498,7 +504,9 @@ export type Database = {
           created_at: string
           expires_at: string | null
           id: string
+          mentor_id: string | null
           payment_id: string | null
+          tariff: Database["public"]["Enums"]["course_tariff"]
           user_id: string
         }
         Insert: {
@@ -507,7 +515,9 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          mentor_id?: string | null
           payment_id?: string | null
+          tariff?: Database["public"]["Enums"]["course_tariff"]
           user_id: string
         }
         Update: {
@@ -516,7 +526,9 @@ export type Database = {
           created_at?: string
           expires_at?: string | null
           id?: string
+          mentor_id?: string | null
           payment_id?: string | null
+          tariff?: Database["public"]["Enums"]["course_tariff"]
           user_id?: string
         }
         Relationships: [
@@ -575,8 +587,8 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "student"
-      course_mode: "strict" | "free"
+      app_role: "admin" | "student" | "mentor"
+      course_tariff: "mentor" | "self"
       feedback_type: "suggestion" | "feedback" | "complaint" | "question"
       lesson_type: "video" | "presentation" | "text"
       payment_status: "pending" | "approved" | "rejected"
@@ -707,8 +719,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "student"],
-      course_mode: ["strict", "free"],
+      app_role: ["admin", "student", "mentor"],
+      course_tariff: ["mentor", "self"],
       feedback_type: ["suggestion", "feedback", "complaint", "question"],
       lesson_type: ["video", "presentation", "text"],
       payment_status: ["pending", "approved", "rejected"],
