@@ -107,7 +107,8 @@ function EditCourse() {
             <div className="space-y-2 sm:col-span-2"><Label>Nomi</Label><Input defaultValue={course.title} onBlur={(e) => e.target.value !== course.title && saveCourse({ title: e.target.value })} /></div>
             <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} defaultValue={course.description ?? ""} onBlur={(e) => e.target.value !== (course.description ?? "") && saveCourse({ description: e.target.value })} /></div>
             <div className="space-y-2"><Label>Kategoriya</Label><Input defaultValue={course.category ?? ""} onBlur={(e) => e.target.value !== (course.category ?? "") && saveCourse({ category: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Narx (so'm)</Label><Input type="number" defaultValue={course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price) && saveCourse({ price: Number(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Erkin o'rganish narxi (so'm)</Label><Input type="number" defaultValue={course.price_self ?? course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price_self ?? course.price) && saveCourse({ price_self: Number(e.target.value), price: Number(e.target.value) })} /></div>
+            <div className="space-y-2"><Label>Mentor yordami narxi (so'm)</Label><Input type="number" defaultValue={course.price_mentor ?? course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price_mentor ?? course.price) && saveCourse({ price_mentor: Number(e.target.value) })} /></div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
                 <div className="text-sm font-medium">Nashr etilgan</div>
