@@ -7,13 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Download, Presentation } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { getLessonPlayback } from "@/lib/bunny.functions";
+import { PresentationViewer } from "@/components/presentation-viewer";
 
 export const Route = createFileRoute("/app/courses/$courseId/lessons/$lessonId")({
   component: LessonPlayer,
@@ -34,7 +35,7 @@ function LessonPlayer() {
     queryFn: async () => {
       const { data: course, error } = await supabase
         .from("courses")
-        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content))")
+        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_url, presentation_type, presentation_name))")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;
