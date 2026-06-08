@@ -15,8 +15,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AuthRegisterRouteImport } from './routes/auth.register'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
+import { Route as AppSubscriptionRouteImport } from './routes/app.subscription'
+import { Route as AppProfileRouteImport } from './routes/app.profile'
+import { Route as AppFeedbackRouteImport } from './routes/app.feedback'
 import { Route as AppCoursesIndexRouteImport } from './routes/app.courses.index'
 import { Route as AppCoursesCourseIdRouteImport } from './routes/app.courses.$courseId'
+import { Route as AppCoursesCourseIdLessonsLessonIdRouteImport } from './routes/app.courses.$courseId.lessons.$lessonId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -48,6 +52,21 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthRoute,
 } as any)
+const AppSubscriptionRoute = AppSubscriptionRouteImport.update({
+  id: '/subscription',
+  path: '/subscription',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProfileRoute = AppProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeedbackRoute = AppFeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCoursesIndexRoute = AppCoursesIndexRouteImport.update({
   id: '/courses/',
   path: '/courses/',
@@ -58,36 +77,54 @@ const AppCoursesCourseIdRoute = AppCoursesCourseIdRouteImport.update({
   path: '/courses/$courseId',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCoursesCourseIdLessonsLessonIdRoute =
+  AppCoursesCourseIdLessonsLessonIdRouteImport.update({
+    id: '/lessons/$lessonId',
+    path: '/lessons/$lessonId',
+    getParentRoute: () => AppCoursesCourseIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/app/feedback': typeof AppFeedbackRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/': typeof AppIndexRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRoute
+  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/app/courses/': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/app/feedback': typeof AppFeedbackRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app': typeof AppIndexRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRoute
+  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/app/courses': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/app/feedback': typeof AppFeedbackRoute
+  '/app/profile': typeof AppProfileRoute
+  '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/': typeof AppIndexRoute
-  '/app/courses/$courseId': typeof AppCoursesCourseIdRoute
+  '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/app/courses/': typeof AppCoursesIndexRoute
+  '/app/courses/$courseId/lessons/$lessonId': typeof AppCoursesCourseIdLessonsLessonIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -95,30 +132,42 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/feedback'
+    | '/app/profile'
+    | '/app/subscription'
     | '/auth/login'
     | '/auth/register'
     | '/app/'
     | '/app/courses/$courseId'
     | '/app/courses/'
+    | '/app/courses/$courseId/lessons/$lessonId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/app/feedback'
+    | '/app/profile'
+    | '/app/subscription'
     | '/auth/login'
     | '/auth/register'
     | '/app'
     | '/app/courses/$courseId'
     | '/app/courses'
+    | '/app/courses/$courseId/lessons/$lessonId'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/auth'
+    | '/app/feedback'
+    | '/app/profile'
+    | '/app/subscription'
     | '/auth/login'
     | '/auth/register'
     | '/app/'
     | '/app/courses/$courseId'
     | '/app/courses/'
+    | '/app/courses/$courseId/lessons/$lessonId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +220,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/app/subscription': {
+      id: '/app/subscription'
+      path: '/subscription'
+      fullPath: '/app/subscription'
+      preLoaderRoute: typeof AppSubscriptionRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/profile': {
+      id: '/app/profile'
+      path: '/profile'
+      fullPath: '/app/profile'
+      preLoaderRoute: typeof AppProfileRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/feedback': {
+      id: '/app/feedback'
+      path: '/feedback'
+      fullPath: '/app/feedback'
+      preLoaderRoute: typeof AppFeedbackRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/courses/': {
       id: '/app/courses/'
       path: '/courses'
@@ -185,18 +255,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoursesCourseIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/courses/$courseId/lessons/$lessonId': {
+      id: '/app/courses/$courseId/lessons/$lessonId'
+      path: '/lessons/$lessonId'
+      fullPath: '/app/courses/$courseId/lessons/$lessonId'
+      preLoaderRoute: typeof AppCoursesCourseIdLessonsLessonIdRouteImport
+      parentRoute: typeof AppCoursesCourseIdRoute
+    }
   }
 }
 
+interface AppCoursesCourseIdRouteChildren {
+  AppCoursesCourseIdLessonsLessonIdRoute: typeof AppCoursesCourseIdLessonsLessonIdRoute
+}
+
+const AppCoursesCourseIdRouteChildren: AppCoursesCourseIdRouteChildren = {
+  AppCoursesCourseIdLessonsLessonIdRoute:
+    AppCoursesCourseIdLessonsLessonIdRoute,
+}
+
+const AppCoursesCourseIdRouteWithChildren =
+  AppCoursesCourseIdRoute._addFileChildren(AppCoursesCourseIdRouteChildren)
+
 interface AppRouteChildren {
+  AppFeedbackRoute: typeof AppFeedbackRoute
+  AppProfileRoute: typeof AppProfileRoute
+  AppSubscriptionRoute: typeof AppSubscriptionRoute
   AppIndexRoute: typeof AppIndexRoute
-  AppCoursesCourseIdRoute: typeof AppCoursesCourseIdRoute
+  AppCoursesCourseIdRoute: typeof AppCoursesCourseIdRouteWithChildren
   AppCoursesIndexRoute: typeof AppCoursesIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppFeedbackRoute: AppFeedbackRoute,
+  AppProfileRoute: AppProfileRoute,
+  AppSubscriptionRoute: AppSubscriptionRoute,
   AppIndexRoute: AppIndexRoute,
-  AppCoursesCourseIdRoute: AppCoursesCourseIdRoute,
+  AppCoursesCourseIdRoute: AppCoursesCourseIdRouteWithChildren,
   AppCoursesIndexRoute: AppCoursesIndexRoute,
 }
 
