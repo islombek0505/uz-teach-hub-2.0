@@ -179,6 +179,7 @@ export type Database = {
         Row: {
           bunny_library_id: string | null
           bunny_video_id: string | null
+          content: string | null
           course_id: string
           created_at: string
           description: string | null
@@ -195,6 +196,7 @@ export type Database = {
         Insert: {
           bunny_library_id?: string | null
           bunny_video_id?: string | null
+          content?: string | null
           course_id: string
           created_at?: string
           description?: string | null
@@ -211,6 +213,7 @@ export type Database = {
         Update: {
           bunny_library_id?: string | null
           bunny_video_id?: string | null
+          content?: string | null
           course_id?: string
           created_at?: string
           description?: string | null
