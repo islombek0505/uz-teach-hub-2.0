@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,14 +9,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { MessageSquare, Lightbulb, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/app/feedback")({
   component: FeedbackPage,
 });
 
 function FeedbackPage() {
+  const { user } = useAuth();
   const [type, setType] = useState("suggestion");
-  const submit = (e: React.FormEvent) => { e.preventDefault(); toast.success("Murojaatingiz yuborildi! Tez orada javob beramiz."); };
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+
+  const loadHistory = async () => {
+    if (!user) return;
+    const { data } = await supabase.from("feedback").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setHistory(data ?? []);
+  };
+  useEffect(() => { loadHistory(); }, [user?.id]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setLoading(true);
+    const { error } = await supabase.from("feedback").insert({
+      user_id: user.id, type: type as any, subject, message,
+    });
+    setLoading(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Murojaatingiz yuborildi!");
+    setSubject(""); setMessage("");
+    loadHistory();
+  };
 
   return (
     <>
@@ -54,10 +82,32 @@ function FeedbackPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2"><Label>Mavzu</Label><Input placeholder="Qisqacha mavzu" required /></div>
-              <div className="space-y-2"><Label>Xabar</Label><Textarea rows={6} placeholder="Murojaatingizni batafsil yozing..." required /></div>
-              <Button type="submit" size="lg">Yuborish</Button>
+              <div className="space-y-2"><Label>Mavzu</Label><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Qisqacha mavzu" required /></div>
+              <div className="space-y-2"><Label>Xabar</Label><Textarea rows={6} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Murojaatingizni batafsil yozing..." required /></div>
+              <Button type="submit" size="lg" disabled={loading}>{loading ? "Yuborilmoqda..." : "Yuborish"}</Button>
             </form>
+
+            {history.length > 0 && (
+              <div className="mt-8 space-y-3">
+                <h3 className="font-display font-semibold">Oldingi murojaatlaringiz</h3>
+                {history.map((f) => (
+                  <div key={f.id} className="rounded-lg border p-4">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{f.type}</Badge>
+                      <span className="font-medium">{f.subject}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{new Date(f.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{f.message}</p>
+                    {f.admin_reply && (
+                      <div className="mt-3 rounded-md bg-primary/5 p-3 text-sm">
+                        <div className="mb-1 text-xs font-semibold text-primary">Admin javobi:</div>
+                        {f.admin_reply}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
