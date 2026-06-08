@@ -20,7 +20,8 @@ function NewCourse() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("dasturlash");
-  const [price, setPrice] = useState("0");
+  const [priceSelf, setPriceSelf] = useState("0");
+  const [priceMentor, setPriceMentor] = useState("0");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -28,7 +29,15 @@ function NewCourse() {
     setLoading(true);
     const { data, error } = await supabase
       .from("courses")
-      .insert({ title, description, category, price: Number(price) || 0, published: false })
+      .insert({
+        title,
+        description,
+        category,
+        price: Number(priceSelf) || 0,
+        price_self: Number(priceSelf) || 0,
+        price_mentor: Number(priceMentor) || 0,
+        published: false,
+      })
       .select("id")
       .single();
     setLoading(false);
@@ -62,7 +71,8 @@ function NewCourse() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Narx (so'm)</Label><Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Erkin o'rganish narxi (so'm)</Label><Input type="number" min="0" value={priceSelf} onChange={(e) => setPriceSelf(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Mentor yordami narxi (so'm)</Label><Input type="number" min="0" value={priceMentor} onChange={(e) => setPriceMentor(e.target.value)} /></div>
               </div>
             </CardContent>
           </Card>

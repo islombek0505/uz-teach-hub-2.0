@@ -23,7 +23,7 @@ function CoursesList() {
       const [{ data: cs, error }, { data: subs }] = await Promise.all([
         supabase
           .from("courses")
-          .select("id, title, description, cover_url, category, price, lessons(count)")
+          .select("id, title, description, cover_url, category, price, price_self, price_mentor, lessons(count)")
           .eq("published", true)
           .order("created_at", { ascending: false }),
         supabase.from("subscriptions").select("course_id, active, expires_at").eq("user_id", user!.id),
@@ -70,7 +70,10 @@ function CoursesList() {
                 <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{c.description ?? "—"}</p>
                 <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {c.lessons?.[0]?.count ?? 0} dars</span>
-                  <span className="font-display text-sm font-semibold text-foreground">{Number(c.price) > 0 ? fmt(Number(c.price)) : "Bepul"}</span>
+                </div>
+                <div className="mt-2 space-y-1 text-xs">
+                  <div className="flex items-center justify-between"><span className="text-muted-foreground">Erkin</span><span className="font-display font-semibold">{Number(c.price_self) > 0 ? fmt(Number(c.price_self)) : "Bepul"}</span></div>
+                  <div className="flex items-center justify-between"><span className="text-muted-foreground">Mentor bilan</span><span className="font-display font-semibold">{Number(c.price_mentor) > 0 ? fmt(Number(c.price_mentor)) : "Bepul"}</span></div>
                 </div>
                 <Button asChild className="mt-4 w-full" variant={c.enrolled ? "default" : "outline"}>
                   <Link to="/app/courses/$courseId" params={{ courseId: c.id }}>{c.enrolled ? "Davom etish" : <><Lock className="mr-1 h-3.5 w-3.5" /> Batafsil / sotib olish</>}</Link>
