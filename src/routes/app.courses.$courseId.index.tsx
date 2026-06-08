@@ -284,6 +284,7 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
+  const [tariff, setTariff] = useState<"mentor" | "self">("self");
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
 
@@ -304,6 +305,7 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
         amount: price,
         note: note || null,
         receipt_url,
+        tariff,
         status: "pending",
       });
       if (error) throw error;
@@ -323,6 +325,25 @@ function EnrollDialog({ courseId, courseTitle, price, userId }: { courseId: stri
       <DialogContent>
         <DialogHeader><DialogTitle className="font-display">{courseTitle} — to'lov</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Tarifni tanlang</Label>
+            <RadioGroup value={tariff} onValueChange={(v) => setTariff(v as "mentor" | "self")} className="grid gap-2 sm:grid-cols-2">
+              <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <RadioGroupItem value="self" className="mt-1" />
+                <div>
+                  <div className="font-medium">Erkin o'rganish</div>
+                  <div className="mt-1 text-xs text-muted-foreground">Faqat video darslar — mentor yo'q</div>
+                </div>
+              </Label>
+              <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                <RadioGroupItem value="mentor" className="mt-1" />
+                <div>
+                  <div className="font-medium">Mentor yordami bilan</div>
+                  <div className="mt-1 text-xs text-muted-foreground">Sizga shaxsiy mentor biriktiriladi va kontaktlari kursda ko'rinadi</div>
+                </div>
+              </Label>
+            </RadioGroup>
+          </div>
           <Card><CardContent className="p-4 space-y-1">
             <div className="text-xs uppercase text-muted-foreground">Karta raqami</div>
             <div className="font-display text-xl font-bold tracking-wider">8600 1234 5678 9012</div>
