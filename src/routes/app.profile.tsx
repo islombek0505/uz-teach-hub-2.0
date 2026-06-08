@@ -101,6 +101,10 @@ function ProfilePage() {
                 <div className="space-y-2"><Label>Shahar</Label><Input value={profile.city || ""} onChange={(e) => setProfile({ ...profile, city: e.target.value })} placeholder="Toshkent" /></div>
                 {isMentor && (
                   <>
+                    <div className="space-y-2"><Label>Kasbiy unvon</Label><Input value={profile.headline || ""} onChange={(e) => setProfile({ ...profile, headline: e.target.value })} placeholder="Senior Frontend Mentor" /></div>
+                    <div className="space-y-2"><Label>Tajriba (yil)</Label><Input type="number" value={profile.experience_years ?? ""} onChange={(e) => setProfile({ ...profile, experience_years: e.target.value })} /></div>
+                    <div className="space-y-2"><Label>Mutaxassislik (vergul bilan)</Label><Input value={profile.expertiseText ?? (Array.isArray(profile.expertise) ? profile.expertise.join(", ") : "")} onChange={(e) => setProfile({ ...profile, expertiseText: e.target.value })} placeholder="Frontend, React, UI/UX" /></div>
+                    <div className="space-y-2"><Label>Bio</Label><Textarea rows={4} value={profile.bio || ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} placeholder="O'zingiz haqingizda qisqacha" /></div>
                     <div className="space-y-2"><Label className="flex items-center gap-1"><Send className="h-3.5 w-3.5" /> Telegram URL</Label><Input value={profile.telegram_url || ""} onChange={(e) => setProfile({ ...profile, telegram_url: e.target.value })} placeholder="https://t.me/username" /></div>
                     <div className="space-y-2"><Label className="flex items-center gap-1"><Instagram className="h-3.5 w-3.5" /> Instagram URL</Label><Input value={profile.instagram_url || ""} onChange={(e) => setProfile({ ...profile, instagram_url: e.target.value })} placeholder="https://instagram.com/username" /></div>
                   </>
