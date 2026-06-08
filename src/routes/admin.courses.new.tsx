@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ChevronLeft, Upload } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/courses/new")({
   component: NewCourse,
@@ -16,7 +18,26 @@ export const Route = createFileRoute("/admin/courses/new")({
 
 function NewCourse() {
   const navigate = useNavigate();
-  const submit = (e: React.FormEvent) => { e.preventDefault(); toast.success("Kurs yaratildi!"); navigate({ to: "/admin/courses" }); };
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("dasturlash");
+  const [mode, setMode] = useState<"strict" | "free">("strict");
+  const [price, setPrice] = useState("0");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("courses")
+      .insert({ title, description, category, mode, price: Number(price) || 0, published: false })
+      .select("id")
+      .single();
+    setLoading(false);
+    if (error || !data) return toast.error(error?.message ?? "Xatolik");
+    toast.success("Kurs yaratildi! Endi modul va darslar qo'shing.");
+    navigate({ to: "/admin/courses/$courseId", params: { courseId: data.id } });
+  };
 
   return (
     <>
@@ -28,12 +49,12 @@ function NewCourse() {
           <Card>
             <CardHeader><CardTitle className="font-display">Kurs ma'lumotlari</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2"><Label>Kurs nomi *</Label><Input placeholder="Masalan: Python asoslari" required /></div>
-              <div className="space-y-2"><Label>Tavsif *</Label><Textarea rows={4} placeholder="Kurs haqida batafsil ma'lumot..." required /></div>
+              <div className="space-y-2"><Label>Kurs nomi *</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Masalan: Python asoslari" required /></div>
+              <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Kurs haqida batafsil ma'lumot..." /></div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Kategoriya</Label>
-                  <Select defaultValue="dasturlash">
+                  <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="dasturlash">Dasturlash</SelectItem>
@@ -43,12 +64,12 @@ function NewCourse() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2"><Label>Davomiyligi</Label><Input placeholder="masalan: 18 soat" /></div>
+                <div className="space-y-2"><Label>Narx (so'm)</Label><Input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
               </div>
 
               <div className="space-y-2">
                 <Label>O'qish rejimi *</Label>
-                <RadioGroup defaultValue="strict" className="grid gap-3 sm:grid-cols-2">
+                <RadioGroup value={mode} onValueChange={(v) => setMode(v as "strict" | "free")} className="grid gap-3 sm:grid-cols-2">
                   <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                     <RadioGroupItem value="strict" className="mt-1" />
                     <div>
@@ -70,19 +91,9 @@ function NewCourse() {
 
           <div className="space-y-6">
             <Card>
-              <CardHeader><CardTitle className="font-display">Muqova rasmi</CardTitle></CardHeader>
-              <CardContent>
-                <div className="flex aspect-video cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors hover:bg-muted/50">
-                  <Upload className="h-8 w-8" />
-                  <div className="text-sm">Rasm yuklash</div>
-                  <div className="text-xs">1280×720, JPG/PNG</div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
               <CardContent className="p-4">
-                <Button type="submit" className="w-full" size="lg">Kursni yaratish</Button>
-                <Button type="button" variant="outline" className="mt-2 w-full">Qoralama saqlash</Button>
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? "Yaratilmoqda..." : "Kursni yaratish"}</Button>
+                <p className="mt-3 text-xs text-muted-foreground">Yaratilgandan so'ng modul va darslar qo'shasiz.</p>
               </CardContent>
             </Card>
           </div>
