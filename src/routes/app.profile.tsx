@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { Send, Instagram } from "lucide-react";
 
 export const Route = createFileRoute("/app/profile")({
   component: ProfilePage,
@@ -18,10 +19,14 @@ function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [isMentor, setIsMentor] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data }) => setProfile(data ?? {}));
+    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+      setIsMentor((data ?? []).some((r: any) => r.role === "mentor"));
+    });
   }, [user?.id]);
 
   const save = async (e: React.FormEvent) => {
@@ -33,6 +38,7 @@ function ProfilePage() {
       email: profile.email || null,
       birth_date: profile.birth_date || null,
       city: profile.city || null,
+      ...(isMentor ? { telegram_url: profile.telegram_url || null, instagram_url: profile.instagram_url || null } : {}),
     }).eq("id", user.id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
@@ -83,6 +89,12 @@ function ProfilePage() {
                 <div className="space-y-2"><Label>Email (ixtiyoriy)</Label><Input type="email" value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} placeholder="email@example.com" /></div>
                 <div className="space-y-2"><Label>Tug'ilgan sana</Label><Input type="date" value={profile.birth_date || ""} onChange={(e) => setProfile({ ...profile, birth_date: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Shahar</Label><Input value={profile.city || ""} onChange={(e) => setProfile({ ...profile, city: e.target.value })} placeholder="Toshkent" /></div>
+                {isMentor && (
+                  <>
+                    <div className="space-y-2"><Label className="flex items-center gap-1"><Send className="h-3.5 w-3.5" /> Telegram URL</Label><Input value={profile.telegram_url || ""} onChange={(e) => setProfile({ ...profile, telegram_url: e.target.value })} placeholder="https://t.me/username" /></div>
+                    <div className="space-y-2"><Label className="flex items-center gap-1"><Instagram className="h-3.5 w-3.5" /> Instagram URL</Label><Input value={profile.instagram_url || ""} onChange={(e) => setProfile({ ...profile, instagram_url: e.target.value })} placeholder="https://instagram.com/username" /></div>
+                  </>
+                )}
                 <Button type="submit" disabled={saving}>{saving ? "Saqlanmoqda..." : "Saqlash"}</Button>
               </form>
             </CardContent>
