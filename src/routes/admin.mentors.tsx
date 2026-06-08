@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,6 @@ import {
   Briefcase,
   GraduationCap,
   ChevronRight,
-  X,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -644,7 +643,7 @@ function MentorCoursesEditor({
 
 function MentorStudentsList({ students }: { students: any[] }) {
   const [details, setDetails] = useState<any[]>([]);
-  useMemo(() => {
+  useEffect(() => {
     (async () => {
       const ids = Array.from(new Set(students.map((s) => s.user_id)));
       if (!ids.length) return setDetails([]);
@@ -763,6 +762,3 @@ function AddMentorDialog({ onAdded }: { onAdded: () => void }) {
     </Dialog>
   );
 }
-
-// Keep import for unused icon hint
-void X;
