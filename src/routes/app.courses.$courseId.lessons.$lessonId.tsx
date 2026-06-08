@@ -14,7 +14,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { getLessonPlayback } from "@/lib/bunny.functions";
-import { PresentationViewer } from "@/components/presentation-viewer";
+import { PresentationSlidesViewer } from "@/components/presentation-viewer";
 
 export const Route = createFileRoute("/app/courses/$courseId/lessons/$lessonId")({
   component: LessonPlayer,
@@ -35,7 +35,7 @@ function LessonPlayer() {
     queryFn: async () => {
       const { data: course, error } = await supabase
         .from("courses")
-        .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_url, presentation_type, presentation_name))")
+          .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_slides))")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;
@@ -267,17 +267,15 @@ function LessonPlayer() {
               )}
             </Tabs>
 
-            {lesson.presentation_url && (
+            {Array.isArray(lesson.presentation_slides) && lesson.presentation_slides.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Presentation className="h-5 w-5 text-primary" />
                   <h2 className="font-display text-lg font-semibold">Dars prezentatsiyasi</h2>
                 </div>
-                <p className="text-sm text-muted-foreground">Quyidagi prezentatsiya darsning to'liq materiali — yuklab olmasdan sahifada ko'rishingiz mumkin.</p>
-                <PresentationViewer
-                  url={lesson.presentation_url}
-                  type={lesson.presentation_type}
-                  name={lesson.presentation_name}
+                <p className="text-sm text-muted-foreground">Slaydlarni keyingi/oldingi tugmalari bilan ko'rib chiqing. Yuklab olish imkoni yo'q.</p>
+                <PresentationSlidesViewer
+                  slides={lesson.presentation_slides as string[]}
                   title={lesson.title}
                 />
               </section>
