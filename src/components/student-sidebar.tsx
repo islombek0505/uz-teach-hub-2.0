@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   BookOpen,
@@ -20,6 +20,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { signOut } from "@/lib/auth";
 
 const items = [
   { title: "Bosh sahifa", url: "/app", icon: LayoutDashboard },
@@ -31,6 +32,11 @@ const items = [
 
 export function StudentSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    await signOut();
+    navigate({ to: "/auth/login" });
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -70,11 +76,9 @@ export function StudentSidebar() {
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link to="/auth/login" className="flex items-center gap-3">
-                <LogOut className="h-4 w-4" />
-                <span>Chiqish</span>
-              </Link>
+            <SidebarMenuButton onClick={handleLogout}>
+              <LogOut className="h-4 w-4" />
+              <span>Chiqish</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
