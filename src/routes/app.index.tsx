@@ -120,9 +120,6 @@ function Dashboard() {
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <Badge variant="secondary">{c.category}</Badge>
-                      <Badge variant={c.mode === "strict" ? "default" : "outline"}>
-                        {c.mode === "strict" ? "Qat'iy rejim" : "Erkin rejim"}
-                      </Badge>
                     </div>
                     <h4 className="mt-3 font-display text-lg font-semibold leading-snug">{c.title}</h4>
                     <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">

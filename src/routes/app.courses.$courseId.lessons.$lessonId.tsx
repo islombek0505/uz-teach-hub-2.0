@@ -35,7 +35,7 @@ function LessonPlayer() {
     queryFn: async () => {
       const { data: course, error } = await supabase
         .from("courses")
-          .select("id, title, mode, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_slides))")
+          .select("id, title, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_slides))")
         .eq("id", courseId)
         .maybeSingle();
       if (error) throw error;

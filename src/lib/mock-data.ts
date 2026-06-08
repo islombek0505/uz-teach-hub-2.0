@@ -37,7 +37,6 @@ export interface Course {
   totalLessons: number;
   totalDuration: string;
   modules: Module[];
-  mode: "strict" | "free";
 }
 
 export const courses: Course[] = [
@@ -50,7 +49,6 @@ export const courses: Course[] = [
     category: "Dasturlash",
     totalLessons: 24,
     totalDuration: "18 soat",
-    mode: "strict",
     modules: [
       {
         id: "m1",
@@ -92,7 +90,6 @@ export const courses: Course[] = [
     category: "Mobile",
     totalLessons: 16,
     totalDuration: "12 soat",
-    mode: "free",
     modules: [
       {
         id: "m1",
@@ -113,7 +110,6 @@ export const courses: Course[] = [
     category: "Dizayn",
     totalLessons: 20,
     totalDuration: "15 soat",
-    mode: "strict",
     modules: [],
   },
 ];
