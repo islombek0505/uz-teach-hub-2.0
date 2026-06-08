@@ -225,6 +225,7 @@ function AddLessonDialog({ moduleId, courseId, position, onAdded }: { moduleId: 
         const sig = await createVideo({ data: { title } });
         bunnyVideoId = sig.videoId;
         bunnyLibraryId = sig.libraryId;
+        const tus = await import("tus-js-client");
         await new Promise<void>((resolve, reject) => {
           const upload = new tus.Upload(file, {
             endpoint: sig.endpoint,
@@ -236,8 +237,8 @@ function AddLessonDialog({ moduleId, courseId, position, onAdded }: { moduleId: 
               LibraryId: sig.libraryId,
             },
             metadata: { filetype: file.type, title, filename: file.name },
-            onError: (e) => reject(e),
-            onProgress: (sent, total) => setProgress(Math.round((sent / total) * 100)),
+            onError: (e: Error) => reject(e),
+            onProgress: (sent: number, total: number) => setProgress(Math.round((sent / total) * 100)),
             onSuccess: () => resolve(),
           });
           upload.start();
