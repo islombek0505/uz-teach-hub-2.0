@@ -285,6 +285,35 @@ export type Database = {
           },
         ]
       }
+      mentor_courses: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          mentor_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          mentor_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          mentor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentor_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           course_id: string
@@ -382,11 +411,15 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           birth_date: string | null
           city: string | null
           created_at: string
           email: string | null
+          experience_years: number | null
+          expertise: string[]
           full_name: string | null
+          headline: string | null
           id: string
           instagram_url: string | null
           phone: string | null
@@ -395,11 +428,15 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           birth_date?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
+          experience_years?: number | null
+          expertise?: string[]
           full_name?: string | null
+          headline?: string | null
           id: string
           instagram_url?: string | null
           phone?: string | null
@@ -408,11 +445,15 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           birth_date?: string | null
           city?: string | null
           created_at?: string
           email?: string | null
+          experience_years?: number | null
+          expertise?: string[]
           full_name?: string | null
+          headline?: string | null
           id?: string
           instagram_url?: string | null
           phone?: string | null
