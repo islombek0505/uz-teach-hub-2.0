@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      course_presentations: {
+        Row: {
+          course_id: string
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_type: string
+          id: string
+          position: number
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_type: string
+          id?: string
+          position?: number
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_type?: string
+          id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_presentations_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           category: string | null
@@ -189,6 +236,9 @@ export type Database = {
           module_id: string
           pass_threshold: number
           position: number
+          presentation_name: string | null
+          presentation_type: string | null
+          presentation_url: string | null
           title: string
           type: Database["public"]["Enums"]["lesson_type"]
           updated_at: string
@@ -206,6 +256,9 @@ export type Database = {
           module_id: string
           pass_threshold?: number
           position?: number
+          presentation_name?: string | null
+          presentation_type?: string | null
+          presentation_url?: string | null
           title: string
           type?: Database["public"]["Enums"]["lesson_type"]
           updated_at?: string
@@ -223,6 +276,9 @@ export type Database = {
           module_id?: string
           pass_threshold?: number
           position?: number
+          presentation_name?: string | null
+          presentation_type?: string | null
+          presentation_url?: string | null
           title?: string
           type?: Database["public"]["Enums"]["lesson_type"]
           updated_at?: string
