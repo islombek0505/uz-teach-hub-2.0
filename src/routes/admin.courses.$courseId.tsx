@@ -196,8 +196,285 @@ function LessonRow({ lesson, onChange }: { lesson: any; onChange: () => void }) 
           {lesson.has_quiz && <Badge variant="outline" className="h-4 px-1 text-[10px]"><ListChecks className="mr-0.5 h-2.5 w-2.5" /> Test</Badge>}
         </div>
       </div>
+      <LessonEditDialog lesson={lesson} onChange={onChange} />
       <Button variant="ghost" size="icon" className="text-destructive" onClick={del}><Trash2 className="h-4 w-4" /></Button>
     </li>
+  );
+}
+
+function CoverUploader({ courseId, coverUrl, onChange }: { courseId: string; coverUrl: string | null; onChange: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!coverUrl) { setPreviewUrl(null); return; }
+      if (coverUrl.startsWith("http")) { setPreviewUrl(coverUrl); return; }
+      const { data } = await supabase.storage.from("course-covers").createSignedUrl(coverUrl, 60 * 60);
+      if (!cancelled) setPreviewUrl(data?.signedUrl ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [coverUrl]);
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${courseId}/cover-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("course-covers").upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { error } = await supabase.from("courses").update({ cover_url: path }).eq("id", courseId);
+      if (error) throw error;
+      toast.success("Kurs rasmi yangilandi");
+      onChange();
+    } catch (e: any) {
+      toast.error(e.message ?? "Xatolik");
+    } finally { setBusy(false); }
+  };
+
+  const remove = async () => {
+    if (!coverUrl) return;
+    if (!confirm("Kurs rasmi o'chirilsinmi?")) return;
+    if (!coverUrl.startsWith("http")) {
+      await supabase.storage.from("course-covers").remove([coverUrl]);
+    }
+    await supabase.from("courses").update({ cover_url: null }).eq("id", courseId);
+    onChange();
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Kurs muqovasi</Label>
+      <div className="flex items-start gap-4">
+        <div className="relative aspect-[16/9] w-64 overflow-hidden rounded-lg border bg-muted">
+          {previewUrl ? (
+            <img src={previewUrl} alt="Kurs muqovasi" className="h-full w-full object-cover" />
+          ) : (
+            <div className="grid h-full w-full place-items-center text-muted-foreground"><ImageIcon className="h-8 w-8" /></div>
+          )}
+        </div>
+        <div className="space-y-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted">
+            <Upload className="h-4 w-4" /> {busy ? "Yuklanmoqda..." : coverUrl ? "Rasmni almashtirish" : "Rasm yuklash"}
+            <input type="file" accept="image/*" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); }} />
+          </label>
+          {coverUrl && <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={remove}><Trash2 className="mr-1 h-3.5 w-3.5" /> O'chirish</Button>}
+          <p className="text-xs text-muted-foreground">16:9 nisbatda JPG/PNG tavsiya etiladi.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LessonEditDialog({ lesson, onChange }: { lesson: any; onChange: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(lesson.title);
+  const [description, setDescription] = useState(lesson.description ?? "");
+  const [content, setContent] = useState(lesson.content ?? "");
+  const [type, setType] = useState<"video" | "presentation" | "text">(lesson.type);
+  const [hasQuiz, setHasQuiz] = useState<boolean>(lesson.has_quiz);
+  const [passThreshold, setPassThreshold] = useState<number>(lesson.pass_threshold ?? 80);
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const createVideo = useServerFn(createBunnyVideo);
+  const deleteVideo = useServerFn(deleteBunnyVideo);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(lesson.title);
+    setDescription(lesson.description ?? "");
+    setContent(lesson.content ?? "");
+    setType(lesson.type);
+    setHasQuiz(lesson.has_quiz);
+    setPassThreshold(lesson.pass_threshold ?? 80);
+    setFile(null); setProgress(0);
+  }, [open, lesson]);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return toast.error("Sarlavha kiriting");
+    setBusy(true);
+    try {
+      const patch: any = { title, description: description || null, content: content || null, type, has_quiz: hasQuiz, pass_threshold: passThreshold };
+
+      if (type === "video" && file) {
+        // If a previous video exists, replace it
+        if (lesson.bunny_video_id) { try { await deleteVideo({ data: { videoId: lesson.bunny_video_id } }); } catch {} }
+        const sig = await createVideo({ data: { title } });
+        patch.bunny_video_id = sig.videoId;
+        patch.bunny_library_id = sig.libraryId;
+        const tus = await import("tus-js-client");
+        await new Promise<void>((resolve, reject) => {
+          const upload = new tus.Upload(file, {
+            endpoint: sig.endpoint,
+            retryDelays: [0, 3000, 5000, 10000, 20000],
+            headers: {
+              AuthorizationSignature: sig.signature,
+              AuthorizationExpire: String(sig.expire),
+              VideoId: sig.videoId,
+              LibraryId: sig.libraryId,
+            },
+            metadata: { filetype: file.type, title, filename: file.name },
+            onError: (e: Error) => reject(e),
+            onProgress: (sent: number, total: number) => setProgress(Math.round((sent / total) * 100)),
+            onSuccess: () => resolve(),
+          });
+          upload.start();
+        });
+      }
+
+      if (type !== "video" && lesson.bunny_video_id) {
+        try { await deleteVideo({ data: { videoId: lesson.bunny_video_id } }); } catch {}
+        patch.bunny_video_id = null;
+        patch.bunny_library_id = null;
+      }
+
+      const { error } = await supabase.from("lessons").update(patch).eq("id", lesson.id);
+      if (error) throw error;
+      toast.success("Saqlandi");
+      onChange();
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err.message ?? "Xatolik");
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader><DialogTitle className="font-display">Darsni tahrirlash</DialogTitle></DialogHeader>
+        <form onSubmit={save} className="space-y-4">
+          <div className="space-y-2"><Label>Sarlavha</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+          <div className="space-y-2"><Label>Qisqa tavsif</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Dars haqida bir-ikki gap" /></div>
+          <div className="space-y-2">
+            <Label>Tur</Label>
+            <Select value={type} onValueChange={(v) => setType(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="video">Video</SelectItem>
+                <SelectItem value="presentation">Prezentatsiya</SelectItem>
+                <SelectItem value="text">Matn</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {type === "video" && (
+            <div className="space-y-2">
+              <Label>Video {lesson.bunny_video_id ? "(almashtirish)" : ""}</Label>
+              <label className="flex aspect-video cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-center text-muted-foreground transition-colors hover:bg-muted/50">
+                <Upload className="h-7 w-7" />
+                <div className="text-sm">{file ? file.name : lesson.bunny_video_id ? "Yangi video tanlang (ixtiyoriy)" : "Video tanlang"}</div>
+                <input type="file" accept="video/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              </label>
+              {busy && progress > 0 && (
+                <div className="space-y-1"><Progress value={progress} /><div className="text-xs text-muted-foreground">{progress}% yuklandi</div></div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label>{type === "presentation" ? "Prezentatsiya mazmuni" : type === "text" ? "Matn mazmuni" : "Qo'shimcha matn (ixtiyoriy)"}</Label>
+            <Textarea
+              rows={10}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={"HTML qo'llab-quvvatlanadi. Masalan: <h2>Mavzu</h2><p>...</p><ul><li>...</li></ul>"}
+              className="font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground">Mazmun darslik sahifasida to'g'ridan-to'g'ri ko'rsatiladi (yuklanmaydi).</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <div className="text-sm font-medium">Test bor</div>
+                <div className="text-xs text-muted-foreground">Dars yakunida</div>
+              </div>
+              <Switch checked={hasQuiz} onCheckedChange={setHasQuiz} />
+            </div>
+            <div className="space-y-2">
+              <Label>O'tish bali (%)</Label>
+              <Input type="number" min={0} max={100} value={passThreshold} onChange={(e) => setPassThreshold(Number(e.target.value))} disabled={!hasQuiz} />
+            </div>
+          </div>
+
+          <MaterialsManager lessonId={lesson.id} />
+
+          <DialogFooter>
+            <Button type="submit" disabled={busy}><Save className="mr-2 h-4 w-4" /> {busy ? "Saqlanmoqda..." : "Saqlash"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MaterialsManager({ lessonId }: { lessonId: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const { data: materials = [] } = useQuery({
+    queryKey: ["admin", "lesson-materials", lessonId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("lesson_materials").select("*").eq("lesson_id", lessonId).order("created_at");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["admin", "lesson-materials", lessonId] });
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    try {
+      const path = `${lessonId}/${Date.now()}-${file.name}`;
+      const { error: upErr } = await supabase.storage.from("materials").upload(path, file, { contentType: file.type });
+      if (upErr) throw upErr;
+      const { error } = await supabase.from("lesson_materials").insert({
+        lesson_id: lessonId, name: file.name, storage_path: path, mime_type: file.type, size_bytes: file.size,
+      });
+      if (error) throw error;
+      toast.success("Material qo'shildi");
+      refresh();
+    } catch (e: any) { toast.error(e.message ?? "Xatolik"); }
+    finally { setBusy(false); }
+  };
+
+  const del = async (m: any) => {
+    if (!confirm(`"${m.name}" o'chirilsinmi?`)) return;
+    await supabase.storage.from("materials").remove([m.storage_path]);
+    await supabase.from("lesson_materials").delete().eq("id", m.id);
+    refresh();
+  };
+
+  return (
+    <div className="space-y-2 rounded-lg border p-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold"><Paperclip className="mr-1 inline h-3.5 w-3.5" /> Qo'shimcha materiallar</Label>
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-1.5 text-xs hover:bg-muted">
+          <Upload className="h-3.5 w-3.5" /> {busy ? "Yuklanmoqda..." : "Fayl qo'shish"}
+          <input type="file" className="hidden" disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) { upload(f); e.target.value = ""; } }} />
+        </label>
+      </div>
+      {materials.length === 0 ? (
+        <p className="text-xs text-muted-foreground">PDF, rasm, slayd va boshqa fayllarni shu yerda qo'shing.</p>
+      ) : (
+        <ul className="divide-y">
+          {materials.map((m: any) => (
+            <li key={m.id} className="flex items-center gap-2 py-2 text-sm">
+              <Download className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="flex-1 truncate">{m.name}</span>
+              <span className="text-xs text-muted-foreground">{m.size_bytes ? `${Math.round(m.size_bytes / 1024)} KB` : ""}</span>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => del(m)}><Trash2 className="h-3.5 w-3.5" /></Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
