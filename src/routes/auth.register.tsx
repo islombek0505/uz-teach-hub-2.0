@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
 import { Phone, Lock, User, ArrowLeft } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { phoneToEmail } from "@/lib/auth";
 
 export const Route = createFileRoute("/auth/register")({
   component: RegisterPage,
@@ -21,23 +23,43 @@ function RegisterPage() {
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const sendSms = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("SMS kod yuborildi");
+    // TODO(Eskiz): real SMS yuborish. Hozir har qanday 6 raqam qabul qilinadi.
+    toast.success("SMS kod yuborildi (demo: istalgan 6 raqam)");
     setStep("otp");
   };
   const verifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 6) return toast.error("6 xonali kod kiriting");
+    if (!/^\d{6}$/.test(otp)) return toast.error("Faqat raqam kiriting");
     toast.success("Kod tasdiqlandi");
     setStep("password");
   };
-  const finish = (e: React.FormEvent) => {
+  const finish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) return toast.error("Parollar mos kelmadi");
+    setLoading(true);
+    const email = phoneToEmail(phone);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/app`,
+        data: { full_name: name, phone: phone.replace(/\D+/g, "") },
+      },
+    });
+    if (error) {
+      setLoading(false);
+      toast.error(error.message.includes("registered") ? "Bu raqam allaqachon ro'yxatdan o'tgan" : error.message);
+      return;
+    }
+    // Auto sign-in (email confirm o'chirilgan)
+    await supabase.auth.signInWithPassword({ email, password });
     toast.success("Ro'yxatdan o'tdingiz!");
-    setTimeout(() => navigate({ to: "/app" }), 600);
+    navigate({ to: "/app" });
   };
 
   return (
@@ -110,7 +132,9 @@ function RegisterPage() {
               <Input id="confirm" type="password" placeholder="••••••••" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="pl-10" required />
             </div>
           </div>
-          <Button type="submit" className="w-full" size="lg">Hisobni yaratish</Button>
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
+            {loading ? "Yaratilmoqda..." : "Hisobni yaratish"}
+          </Button>
         </form>
       )}
 
