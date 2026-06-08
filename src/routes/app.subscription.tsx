@@ -1,48 +1,56 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { mockUser, formatPrice, mockPayments } from "@/lib/mock-data";
-import { CheckCircle2, Calendar, CreditCard, Phone, Send, Copy } from "lucide-react";
+import { CheckCircle2, CreditCard, Phone, Send, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/app/subscription")({
   component: SubscriptionPage,
 });
 
+const fmt = (n: number) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
+
 function SubscriptionPage() {
-  const myPayments = mockPayments.filter(p => p.studentName === mockUser.name);
+  const { user } = useAuth();
   const copy = (t: string) => { navigator.clipboard.writeText(t); toast.success("Nusxa olindi"); };
+
+  const { data } = useQuery({
+    enabled: !!user,
+    queryKey: ["app", "subscription", user?.id],
+    queryFn: async () => {
+      const [{ data: subs }, { data: payments }] = await Promise.all([
+        supabase.from("subscriptions").select("active, expires_at, courses(title)").eq("user_id", user!.id).eq("active", true),
+        supabase.from("payments").select("id, amount, status, created_at, courses(title)").eq("user_id", user!.id).order("created_at", { ascending: false }),
+      ]);
+      return { subs: subs ?? [], payments: payments ?? [] };
+    },
+  });
 
   return (
     <>
       <Topbar title="Obuna va to'lov" />
       <main className="flex-1 space-y-6 p-4 lg:p-6">
-        {/* Active status */}
-        <Card className="overflow-hidden">
-          <div className="p-6 text-primary-foreground" style={{ background: "var(--gradient-hero)" }}>
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-success/20 text-success border-success/30">
-                    <CheckCircle2 className="mr-1 h-3 w-3" /> Faol
-                  </Badge>
-                  <span className="text-sm text-white/80">{mockUser.subscription.plan} tarif</span>
+        <Card>
+          <CardHeader><CardTitle className="font-display">Faol obunalar</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {(data?.subs ?? []).length === 0 && <div className="text-sm text-muted-foreground">Hozircha faol obuna yo'q. <Link to="/app/courses" className="text-primary underline">Kurslarni ko'ring</Link>.</div>}
+            {(data?.subs ?? []).map((s: any, i: number) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <div className="font-medium">{s.courses?.title ?? "—"}</div>
+                  <div className="text-xs text-muted-foreground">Tugaydi: {s.expires_at ? new Date(s.expires_at).toLocaleDateString("uz-UZ") : "muddatsiz"}</div>
                 </div>
-                <h2 className="mt-3 font-display text-3xl font-bold">{formatPrice(mockUser.subscription.amount)}/oy</h2>
-                <p className="mt-1 text-sm text-white/70">Barcha kurslarga to'liq ruxsat</p>
+                <Badge className="bg-success text-success-foreground"><CheckCircle2 className="mr-1 h-3 w-3" /> Faol</Badge>
               </div>
-              <div className="text-right text-sm">
-                <div className="text-white/70">Tugaydi</div>
-                <div className="font-display text-2xl font-bold">{mockUser.subscription.endDate}</div>
-                <div className="mt-1 flex items-center gap-1 text-white/70"><Calendar className="h-3.5 w-3.5" /> 30 kun qoldi</div>
-              </div>
-            </div>
-          </div>
+            ))}
+          </CardContent>
         </Card>
 
-        {/* How to pay */}
         <Card>
           <CardHeader>
             <CardTitle className="font-display">Obunani yangilash / To'lov qilish</CardTitle>
@@ -78,20 +86,20 @@ function SubscriptionPage() {
           </CardContent>
         </Card>
 
-        {/* History */}
         <Card>
           <CardHeader><CardTitle className="font-display">To'lovlar tarixi</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {myPayments.map((p) => (
+              {(data?.payments ?? []).length === 0 && <div className="text-sm text-muted-foreground">To'lovlar tarixi bo'sh</div>}
+              {(data?.payments ?? []).map((p: any) => (
                 <div key={p.id} className="flex items-center gap-4 rounded-lg border p-4">
                   <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><CreditCard className="h-5 w-5" /></div>
                   <div className="flex-1">
-                    <div className="font-medium">{formatPrice(p.amount)}</div>
-                    <div className="text-xs text-muted-foreground">{p.method} • {p.date}</div>
+                    <div className="font-medium">{fmt(Number(p.amount))}</div>
+                    <div className="text-xs text-muted-foreground">{p.courses?.title ?? "—"} • {new Date(p.created_at).toLocaleDateString("uz-UZ")}</div>
                   </div>
-                  <Badge variant={p.status === "approved" ? "default" : "secondary"} className={p.status === "approved" ? "bg-success text-success-foreground" : ""}>
-                    {p.status === "approved" ? "Tasdiqlangan" : "Kutilmoqda"}
+                  <Badge className={p.status === "approved" ? "bg-success text-success-foreground" : p.status === "rejected" ? "bg-destructive text-destructive-foreground" : "bg-warning text-warning-foreground"}>
+                    {p.status === "approved" ? "Tasdiqlangan" : p.status === "rejected" ? "Rad etilgan" : "Kutilmoqda"}
                   </Badge>
                 </div>
               ))}
