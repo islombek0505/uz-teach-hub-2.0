@@ -63,6 +63,8 @@ export type Database = {
           description: string | null
           id: string
           price: number
+          price_mentor: number
+          price_self: number
           published: boolean
           title: string
           updated_at: string
@@ -74,6 +76,8 @@ export type Database = {
           description?: string | null
           id?: string
           price?: number
+          price_mentor?: number
+          price_self?: number
           published?: boolean
           title: string
           updated_at?: string
@@ -85,6 +89,8 @@ export type Database = {
           description?: string | null
           id?: string
           price?: number
+          price_mentor?: number
+          price_self?: number
           published?: boolean
           title?: string
           updated_at?: string
