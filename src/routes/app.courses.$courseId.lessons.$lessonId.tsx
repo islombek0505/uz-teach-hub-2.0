@@ -267,6 +267,22 @@ function LessonPlayer() {
               )}
             </Tabs>
 
+            {lesson.presentation_url && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Presentation className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-lg font-semibold">Dars prezentatsiyasi</h2>
+                </div>
+                <p className="text-sm text-muted-foreground">Quyidagi prezentatsiya darsning to'liq materiali — yuklab olmasdan sahifada ko'rishingiz mumkin.</p>
+                <PresentationViewer
+                  url={lesson.presentation_url}
+                  type={lesson.presentation_type}
+                  name={lesson.presentation_name}
+                  title={lesson.title}
+                />
+              </section>
+            )}
+
             <div className="flex items-center justify-between border-t pt-4">
               <Button variant="outline" disabled={!prev} onClick={() => prev && navigate({ to: "/app/courses/$courseId/lessons/$lessonId", params: { courseId, lessonId: prev.id } })}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> Oldingi
