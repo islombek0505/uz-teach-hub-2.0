@@ -742,8 +742,9 @@ function CoursePresentationsManager({ courseId }: { courseId: string }) {
 
   const del = async (item: any) => {
     if (!confirm(`"${item.title}" o'chirilsinmi?`)) return;
-    if (item.url && !item.url.startsWith("http")) {
-      await supabase.storage.from("presentations").remove([item.url]);
+    const paths: string[] = (item.slides ?? []).filter((s: string) => s && !s.startsWith("http"));
+    if (paths.length) {
+      await supabase.storage.from("presentations").remove(paths);
     }
     const { error } = await supabase.from("course_presentations").delete().eq("id", item.id);
     if (error) return toast.error(error.message);
