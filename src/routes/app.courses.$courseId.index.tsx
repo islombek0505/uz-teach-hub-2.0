@@ -193,8 +193,45 @@ function CourseDetail() {
             })}
           </Accordion>
         </div>
+
+        {enrolled && presentations.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center gap-2">
+              <Presentation className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-xl font-semibold">Takrorlash prezentatsiyalari</h2>
+            </div>
+            <p className="mb-3 text-sm text-muted-foreground">Bir nechta darsning qisqacha jamlanmasi. Tez takrorlash uchun.</p>
+            <div className="space-y-4">
+              {presentations.map((p: any) => (
+                <CoursePresentationCard key={p.id} item={p} />
+              ))}
+            </div>
+          </div>
+        )}
       </main>
     </>
+  );
+}
+
+function CoursePresentationCard({ item }: { item: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Presentation className="h-5 w-5" /></div>
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-semibold">{item.title}</div>
+            {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
+          </div>
+          <Badge variant="outline" className="uppercase">{item.file_type}</Badge>
+          <Button size="sm" variant={open ? "outline" : "default"} onClick={() => setOpen((v) => !v)}>
+            {open ? "Yopish" : "Ochish"}
+          </Button>
+        </div>
+        {open && <PresentationViewer url={item.url} type={item.file_type} name={item.file_name} title={item.title} />}
+      </CardContent>
+    </Card>
   );
 }
 
