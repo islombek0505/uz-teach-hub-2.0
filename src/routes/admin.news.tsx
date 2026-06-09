@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -127,11 +127,11 @@ function AdminNews() {
 
 function NewsCard({ item, onEdit, onDelete }: { item: any; onEdit: () => void; onDelete: () => void }) {
   const [signed, setSigned] = useState<string | null>(null);
-  useState(() => {
+  useEffect(() => {
     if (item.image_url && !item.image_url.startsWith("http")) {
       supabase.storage.from("course-covers").createSignedUrl(item.image_url, 3600).then(({ data }) => setSigned(data?.signedUrl ?? null));
     } else if (item.image_url) setSigned(item.image_url);
-  });
+  }, [item.image_url]);
   return (
     <Card className="overflow-hidden">
       {signed ? (
