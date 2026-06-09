@@ -26,6 +26,7 @@ import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminNewsRouteImport } from './routes/admin.news'
 import { Route as AdminMentorsRouteImport } from './routes/admin.mentors'
 import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AppCoursesIndexRouteImport } from './routes/app.courses.index'
@@ -121,6 +122,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNewsRoute = AdminNewsRouteImport.update({
+  id: '/news',
+  path: '/news',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMentorsRoute = AdminMentorsRouteImport.update({
   id: '/mentors',
   path: '/mentors',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
@@ -285,6 +295,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
@@ -462,6 +474,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/news': {
+      id: '/admin/news'
+      path: '/news'
+      fullPath: '/admin/news'
+      preLoaderRoute: typeof AdminNewsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/mentors': {
       id: '/admin/mentors'
       path: '/mentors'
@@ -531,6 +550,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminMentorsRoute: typeof AdminMentorsRoute
+  AdminNewsRoute: typeof AdminNewsRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -544,6 +564,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminMentorsRoute: AdminMentorsRoute,
+  AdminNewsRoute: AdminNewsRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
@@ -615,3 +636,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
