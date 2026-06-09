@@ -507,6 +507,15 @@ function MentorEditForm({ mentor, onSaved }: { mentor: Mentor; onSaved: () => vo
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-center">
+        <AvatarUploader
+          userId={mentor.id}
+          url={mentor.avatar_url}
+          name={form.full_name}
+          size={88}
+          onChange={() => onSaved()}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Ism Familiya">
           <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
