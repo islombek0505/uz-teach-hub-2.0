@@ -9,6 +9,8 @@ import {
   Settings,
   LogOut,
   Shield,
+  Bell,
+  Newspaper,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,6 +32,8 @@ const items = [
   { title: "O'quvchilar", url: "/admin/students", icon: Users },
   { title: "Mentorlar", url: "/admin/mentors", icon: UserCheck },
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
+  { title: "Bildirishnomalar", url: "/admin/notifications", icon: Bell },
+  { title: "Yangiliklar", url: "/admin/news", icon: Newspaper },
   { title: "Takliflar", url: "/admin/feedback", icon: MessageSquare },
   { title: "Sozlamalar", url: "/admin/settings", icon: Settings },
 ];
