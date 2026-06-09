@@ -207,6 +207,7 @@ function AdminMentors() {
                 <CardContent className="flex-1 space-y-3 p-5">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-14 w-14">
+                      {m.avatar_url ? <AvatarImage src={m.avatar_url} alt={m.full_name ?? ""} /> : null}
                       <AvatarFallback className="bg-primary text-base font-display font-semibold text-primary-foreground">
                         {(m.full_name || "M").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -365,6 +366,7 @@ function MentorDetailDialog({
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-3">
             <Avatar className="h-10 w-10">
+              {mentor.avatar_url ? <AvatarImage src={mentor.avatar_url} alt={mentor.full_name ?? ""} /> : null}
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {(mentor.full_name || "M").slice(0, 2).toUpperCase()}
               </AvatarFallback>
