@@ -48,7 +48,7 @@ export function NewsCarousel() {
               <CarouselItem key={n.id} className="md:basis-1/2 lg:basis-1/3">
                 <Card className="h-full overflow-hidden">
                   {n._image ? (
-                    <div className="aspect-[16/9] bg-cover bg-center" style={{ backgroundImage: `url(${n._image})` }} loading="lazy" />
+                    <div className="aspect-[16/9] bg-cover bg-center" style={{ backgroundImage: `url(${n._image})` }} />
                   ) : (
                     <div className="aspect-[16/9] grid place-items-center bg-gradient-to-br from-primary/10 to-accent/20"><Icon className="h-10 w-10 text-primary/40" /></div>
                   )}
