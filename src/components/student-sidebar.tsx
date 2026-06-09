@@ -8,6 +8,7 @@ import {
   LogOut,
   GraduationCap,
   UserCheck,
+  Bell,
 } from "lucide-react";
 import {
   Sidebar,
@@ -29,6 +30,7 @@ import { useAuth } from "@/lib/auth";
 const baseItems = [
   { title: "Bosh sahifa", url: "/app", icon: LayoutDashboard },
   { title: "Kurslarim", url: "/app/courses", icon: BookOpen },
+  { title: "Bildirishnomalar", url: "/app/notifications", icon: Bell },
   { title: "Obuna va to'lov", url: "/app/subscription", icon: CreditCard },
   { title: "Takliflar", url: "/app/feedback", icon: MessageSquare },
   { title: "Profil", url: "/app/profile", icon: User },

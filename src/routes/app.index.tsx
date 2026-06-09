@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Clock, Trophy, TrendingUp, PlayCircle, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { NewsCarousel } from "@/components/news-carousel";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -97,6 +98,8 @@ function Dashboard() {
             </Card>
           ))}
         </div>
+
+        <NewsCarousel />
 
         <div>
           <div className="mb-4 flex items-center justify-between">

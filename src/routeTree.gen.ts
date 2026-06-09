@@ -19,11 +19,14 @@ import { Route as AuthRegisterRouteImport } from './routes/auth.register'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AppSubscriptionRouteImport } from './routes/app.subscription'
 import { Route as AppProfileRouteImport } from './routes/app.profile'
+import { Route as AppNotificationsRouteImport } from './routes/app.notifications'
 import { Route as AppMentorRouteImport } from './routes/app.mentor'
 import { Route as AppFeedbackRouteImport } from './routes/app.feedback'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminNewsRouteImport } from './routes/admin.news'
 import { Route as AdminMentorsRouteImport } from './routes/admin.mentors'
 import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AppCoursesIndexRouteImport } from './routes/app.courses.index'
@@ -84,6 +87,11 @@ const AppProfileRoute = AppProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMentorRoute = AppMentorRouteImport.update({
   id: '/mentor',
   path: '/mentor',
@@ -107,6 +115,16 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminNewsRoute = AdminNewsRouteImport.update({
+  id: '/news',
+  path: '/news',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMentorsRoute = AdminMentorsRouteImport.update({
@@ -163,11 +181,14 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/profile': typeof AppProfileRoute
   '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
@@ -187,11 +208,14 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/profile': typeof AppProfileRoute
   '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
@@ -213,11 +237,14 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/admin/feedback': typeof AdminFeedbackRoute
   '/admin/mentors': typeof AdminMentorsRoute
+  '/admin/news': typeof AdminNewsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
+  '/app/notifications': typeof AppNotificationsRoute
   '/app/profile': typeof AppProfileRoute
   '/app/subscription': typeof AppSubscriptionRoute
   '/auth/login': typeof AuthLoginRoute
@@ -241,11 +268,14 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
+    | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
+    | '/app/notifications'
     | '/app/profile'
     | '/app/subscription'
     | '/auth/login'
@@ -265,11 +295,14 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
+    | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
+    | '/app/notifications'
     | '/app/profile'
     | '/app/subscription'
     | '/auth/login'
@@ -290,11 +323,14 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/feedback'
     | '/admin/mentors'
+    | '/admin/news'
+    | '/admin/notifications'
     | '/admin/payments'
     | '/admin/settings'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
+    | '/app/notifications'
     | '/app/profile'
     | '/app/subscription'
     | '/auth/login'
@@ -389,6 +425,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProfileRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/notifications': {
+      id: '/app/notifications'
+      path: '/notifications'
+      fullPath: '/app/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/mentor': {
       id: '/app/mentor'
       path: '/mentor'
@@ -422,6 +465,20 @@ declare module '@tanstack/react-router' {
       path: '/payments'
       fullPath: '/admin/payments'
       preLoaderRoute: typeof AdminPaymentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/news': {
+      id: '/admin/news'
+      path: '/news'
+      fullPath: '/admin/news'
+      preLoaderRoute: typeof AdminNewsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/mentors': {
@@ -493,6 +550,8 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminMentorsRoute: typeof AdminMentorsRoute
+  AdminNewsRoute: typeof AdminNewsRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStudentsRoute: typeof AdminStudentsRoute
@@ -505,6 +564,8 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminFeedbackRoute: AdminFeedbackRoute,
   AdminMentorsRoute: AdminMentorsRoute,
+  AdminNewsRoute: AdminNewsRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStudentsRoute: AdminStudentsRoute,
@@ -533,6 +594,7 @@ const AppCoursesCourseIdRouteWithChildren =
 interface AppRouteChildren {
   AppFeedbackRoute: typeof AppFeedbackRoute
   AppMentorRoute: typeof AppMentorRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppSubscriptionRoute: typeof AppSubscriptionRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -543,6 +605,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppFeedbackRoute: AppFeedbackRoute,
   AppMentorRoute: AppMentorRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppProfileRoute: AppProfileRoute,
   AppSubscriptionRoute: AppSubscriptionRoute,
   AppIndexRoute: AppIndexRoute,

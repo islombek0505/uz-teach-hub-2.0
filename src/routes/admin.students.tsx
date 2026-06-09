@@ -20,9 +20,10 @@ function AdminStudents() {
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["admin", "students"],
     queryFn: async () => {
-      const { data: roles, error } = await supabase.from("user_roles").select("user_id").eq("role", "student");
+      const { data: roles, error } = await supabase.from("user_roles").select("user_id, role").in("role", ["student", "admin"] as any);
       if (error) throw error;
-      const ids = (roles ?? []).map((r) => r.user_id);
+      const adminSet = new Set((roles ?? []).filter((r: any) => r.role === "admin").map((r: any) => r.user_id));
+      const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
       if (!ids.length) return [];
       const [{ data: profs }, { data: subs }] = await Promise.all([
         supabase.from("profiles").select("id, full_name, phone, created_at").in("id", ids),
@@ -39,7 +40,7 @@ function AdminStudents() {
         arr.push({ ...s, mentor_name: s.mentor_id ? mMap.get(s.mentor_id) : null });
         sMap.set(s.user_id, arr);
       }
-      return (profs ?? []).map((p: any) => ({ ...p, subs: sMap.get(p.id) ?? [] }));
+      return (profs ?? []).map((p: any) => ({ ...p, subs: sMap.get(p.id) ?? [], is_admin: adminSet.has(p.id) }));
     },
   });
 
@@ -88,7 +89,10 @@ function AdminStudents() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback></Avatar>
                           <div>
-                            <div className="font-medium">{s.full_name || "—"}</div>
+                            <div className="flex items-center gap-2 font-medium">
+                              {s.full_name || "—"}
+                              {s.is_admin && <Badge className="bg-primary text-primary-foreground h-5 px-1.5 text-[10px]">Admin</Badge>}
+                            </div>
                             <div className="text-xs text-muted-foreground">{s.phone ?? "—"}</div>
                           </div>
                         </div>
