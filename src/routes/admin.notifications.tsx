@@ -30,7 +30,7 @@ function AdminNotifications() {
     queryFn: async () => {
       const { data, error } = await (supabase.from as any)("notifications").select("*").order("created_at", { ascending: false }).limit(200);
       if (error) throw error;
-      const userIds = Array.from(new Set((data ?? []).map((n: any) => n.user_id).filter(Boolean)));
+      const userIds = Array.from(new Set((data ?? []).map((n: any) => n.user_id).filter(Boolean))) as string[];
       const { data: profs } = userIds.length
         ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
         : { data: [] as any[] };
