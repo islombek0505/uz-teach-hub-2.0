@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Send, Instagram } from "lucide-react";
+import { AvatarUploader } from "@/components/avatar-uploader";
 
 export const Route = createFileRoute("/app/profile")({
   component: ProfilePage,
@@ -70,17 +70,19 @@ function ProfilePage() {
 
   if (!profile) return <><Topbar title="Mening profilim" /><main className="flex-1 p-6"><div className="text-muted-foreground">Yuklanmoqda...</div></main></>;
 
-  const initials = (profile.full_name || "U").split(" ").map((s: string) => s[0]).slice(0, 2).join("").toUpperCase();
-
   return (
     <>
       <Topbar title="Mening profilim" />
       <main className="flex-1 space-y-6 p-4 lg:p-6">
         <Card>
           <CardContent className="flex flex-col items-center gap-4 p-8 text-center sm:flex-row sm:text-left">
-            <Avatar className="h-24 w-24">
-              <AvatarFallback className="bg-primary text-2xl font-display font-semibold text-primary-foreground">{initials}</AvatarFallback>
-            </Avatar>
+            <AvatarUploader
+              userId={user!.id}
+              url={profile.avatar_url}
+              name={profile.full_name}
+              size={96}
+              onChange={(u) => setProfile({ ...profile, avatar_url: u })}
+            />
             <div className="flex-1">
               <h2 className="font-display text-2xl font-bold">{profile.full_name || "Foydalanuvchi"}</h2>
               <p className="text-sm text-muted-foreground">{profile.phone}</p>
