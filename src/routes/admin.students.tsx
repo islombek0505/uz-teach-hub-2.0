@@ -4,7 +4,7 @@ import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,7 +26,7 @@ function AdminStudents() {
       const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
       if (!ids.length) return [];
       const [{ data: profs }, { data: subs }] = await Promise.all([
-        supabase.from("profiles").select("id, full_name, phone, created_at").in("id", ids),
+        supabase.from("profiles").select("id, full_name, phone, avatar_url, created_at").in("id", ids),
         supabase.from("subscriptions").select("user_id, active, expires_at, tariff, mentor_id, courses(title)").in("user_id", ids),
       ]);
       const mentorIds = Array.from(new Set((subs ?? []).map((s: any) => s.mentor_id).filter(Boolean)));
@@ -87,7 +87,10 @@ function AdminStudents() {
                     <TableRow key={s.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9"><AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback></Avatar>
+                          <Avatar className="h-9 w-9">
+                            {s.avatar_url ? <AvatarImage src={s.avatar_url} alt={s.full_name ?? ""} /> : null}
+                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">{initials}</AvatarFallback>
+                          </Avatar>
                           <div>
                             <div className="flex items-center gap-2 font-medium">
                               {s.full_name || "—"}

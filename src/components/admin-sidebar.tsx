@@ -11,6 +11,7 @@ import {
   Shield,
   Bell,
   Newspaper,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const items = [
   { title: "Bildirishnomalar", url: "/admin/notifications", icon: Bell },
   { title: "Yangiliklar", url: "/admin/news", icon: Newspaper },
   { title: "Takliflar", url: "/admin/feedback", icon: MessageSquare },
+  { title: "Mening profilim", url: "/admin/profile", icon: User },
   { title: "Sozlamalar", url: "/admin/settings", icon: Settings },
 ];
 

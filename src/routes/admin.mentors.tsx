@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarImage } from "@/components/ui/avatar";
+import { AvatarUploader } from "@/components/avatar-uploader";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -53,6 +55,7 @@ type Mentor = {
   headline: string | null;
   expertise: string[] | null;
   experience_years: number | null;
+  avatar_url: string | null;
   created_at: string;
 };
 
@@ -204,6 +207,7 @@ function AdminMentors() {
                 <CardContent className="flex-1 space-y-3 p-5">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-14 w-14">
+                      {m.avatar_url ? <AvatarImage src={m.avatar_url} alt={m.full_name ?? ""} /> : null}
                       <AvatarFallback className="bg-primary text-base font-display font-semibold text-primary-foreground">
                         {(m.full_name || "M").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -362,6 +366,7 @@ function MentorDetailDialog({
         <DialogHeader>
           <DialogTitle className="font-display flex items-center gap-3">
             <Avatar className="h-10 w-10">
+              {mentor.avatar_url ? <AvatarImage src={mentor.avatar_url} alt={mentor.full_name ?? ""} /> : null}
               <AvatarFallback className="bg-primary text-primary-foreground">
                 {(mentor.full_name || "M").slice(0, 2).toUpperCase()}
               </AvatarFallback>
@@ -502,6 +507,15 @@ function MentorEditForm({ mentor, onSaved }: { mentor: Mentor; onSaved: () => vo
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-center">
+        <AvatarUploader
+          userId={mentor.id}
+          url={mentor.avatar_url}
+          name={form.full_name}
+          size={88}
+          onChange={() => onSaved()}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Ism Familiya">
           <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />

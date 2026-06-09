@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ function MentorPortal() {
       const profiles = userIds.length
         ? (await supabase
             .from("profiles")
-            .select("id, full_name, phone")
+            .select("id, full_name, phone, avatar_url")
             .in("id", userIds)).data ?? []
         : [];
       const pmap = new Map(profiles.map((p: any) => [p.id, p]));
@@ -112,6 +112,7 @@ function MentorPortal() {
                 <Card key={`${s.user_id}-${s.course_id}`}>
                   <CardContent className="flex items-center gap-3 p-4">
                     <Avatar className="h-10 w-10">
+                      {s.profile?.avatar_url ? <AvatarImage src={s.profile.avatar_url} alt={s.profile.full_name ?? ""} /> : null}
                       <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                         {(s.profile?.full_name || "U").slice(0, 2).toUpperCase()}
                       </AvatarFallback>
