@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarImage } from "@/components/ui/avatar";
+import { AvatarUploader } from "@/components/avatar-uploader";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -53,6 +55,7 @@ type Mentor = {
   headline: string | null;
   expertise: string[] | null;
   experience_years: number | null;
+  avatar_url: string | null;
   created_at: string;
 };
 
