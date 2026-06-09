@@ -1,17 +1,34 @@
 import { Bell, CheckCheck } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Link } from "@tanstack/react-router";
 import { useNotifications, useMarkRead, useMarkAllRead } from "@/lib/notifications";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 
 export function Topbar({ title, initials = "AY" }: { title: string; initials?: string }) {
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkRead();
   const markAll = useMarkAllRead();
   const unread = notifs.filter((n) => !n.is_read);
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setProfile(data as any));
+  }, [user?.id]);
+  const computedInitials =
+    profile?.full_name?.split(" ").map((s) => s[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() ||
+    initials;
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur-md lg:px-6">
@@ -74,8 +91,9 @@ export function Topbar({ title, initials = "AY" }: { title: string; initials?: s
           </PopoverContent>
         </Popover>
         <Avatar className="h-9 w-9">
+          {profile?.avatar_url ? <AvatarImage src={profile.avatar_url} alt={profile.full_name ?? ""} /> : null}
           <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-            {initials}
+            {computedInitials}
           </AvatarFallback>
         </Avatar>
       </div>
