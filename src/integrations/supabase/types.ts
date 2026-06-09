@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact_channels: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          type: string
+          updated_at: string
+          url: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          type: string
+          updated_at?: string
+          url?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          type?: string
+          updated_at?: string
+          url?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       course_presentations: {
         Row: {
           course_id: string
@@ -453,6 +489,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_cards: {
+        Row: {
+          bank: string | null
+          card_number: string
+          created_at: string
+          holder_name: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          bank?: string | null
+          card_number: string
+          created_at?: string
+          holder_name: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          bank?: string | null
+          card_number?: string
+          created_at?: string
+          holder_name?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           admin_note: string | null
@@ -514,6 +586,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
