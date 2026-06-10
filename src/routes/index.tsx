@@ -3,6 +3,12 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   GraduationCap,
   PlayCircle,
   Shield,
@@ -11,6 +17,7 @@ import {
   CheckCircle2,
   ArrowRight,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -142,6 +149,65 @@ function Index() {
                 <Link to="/auth/register">Hozir boshlash</Link>
               </Button>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="relative border-t py-24">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-medium text-muted-foreground">
+              <HelpCircle className="h-3.5 w-3.5" />
+              Tez-tez beriladigan savollar
+            </div>
+            <h2 className="font-display text-4xl font-bold tracking-tight">Savollaringiz bormi?</h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Eng ko'p so'raladigan savollarga javoblarni shu yerdan topasiz
+            </p>
+          </div>
+          <div className="mx-auto mt-12 max-w-3xl">
+            <Accordion type="single" collapsible className="space-y-3">
+              {[
+                {
+                  q: "Obuna qanday ishlaydi?",
+                  a: "Oylik obuna sotib olganingizdan so'ng platformadagi barcha kurslarga to'liq ruxsat olasiz. Obuna muddati tugagach uni yangilashingiz mumkin.",
+                },
+                {
+                  q: "To'lovni qanday amalga oshiraman?",
+                  a: "Ro'yxatdan o'tib, obuna sahifasidan platforma kartalariga to'lov o'tkazasiz va chekni yuklab yuborasiz. Admin tasdiqlagandan keyin kurs ochiladi.",
+                },
+                {
+                  q: "Video darslarni yuklab olsa bo'ladimi?",
+                  a: "Yo'q. Mualliflik huquqlarini himoya qilish maqsadida darslar faqat platforma orqali ko'riladi.",
+                },
+                {
+                  q: "Sertifikat beriladimi?",
+                  a: "Ha, kursni to'liq tugatib testlardan o'tgan o'quvchilarga raqamli sertifikat beriladi.",
+                },
+                {
+                  q: "Mentor bilan bog'lanish mumkinmi?",
+                  a: "Albatta. Har bir o'quvchiga mentor biriktiriladi va siz u bilan Telegram yoki platforma orqali bog'lana olasiz.",
+                },
+                {
+                  q: "Qanday qurilmalarda ishlaydi?",
+                  a: "LearnHub telefon, planshet va kompyuterda — istalgan zamonaviy brauzerda muammosiz ishlaydi.",
+                },
+              ].map((item, i) => (
+                <AccordionItem
+                  key={i}
+                  value={`item-${i}`}
+                  className="rounded-xl border border-border/60 bg-card px-5 transition-all hover:border-primary/30 hover:shadow-[var(--shadow-elegant)] data-[state=open]:border-primary/40 data-[state=open]:shadow-[var(--shadow-elegant)]"
+                >
+                  <AccordionTrigger className="py-5 text-left font-display text-base font-semibold hover:no-underline">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 text-sm leading-relaxed text-muted-foreground">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </div>
       </section>
