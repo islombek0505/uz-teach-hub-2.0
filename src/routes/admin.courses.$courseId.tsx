@@ -151,9 +151,18 @@ function EditCourse() {
                 </AccordionTrigger>
                 <AccordionContent className="border-t bg-muted/20 px-0 pb-0">
                   <ul className="divide-y">
-                    {m.lessons.map((l: any) => <LessonRow key={l.id} lesson={l} onChange={invalidate} />)}
+                    {m.lessons.map((l: any, li: number) => (
+                      <LessonRow
+                        key={l.id}
+                        lesson={l}
+                        index={li}
+                        total={m.lessons.length}
+                        siblings={m.lessons}
+                        onChange={invalidate}
+                      />
+                    ))}
                     <li className="bg-muted/20 px-4 py-3">
-                      <AddLessonDialog moduleId={m.id} courseId={courseId} position={m.lessons.length} onAdded={invalidate} />
+                      <AddLessonDialog moduleId={m.id} courseId={courseId} onAdded={invalidate} />
                     </li>
                   </ul>
                 </AccordionContent>
@@ -168,7 +177,7 @@ function EditCourse() {
   );
 }
 
-function LessonRow({ lesson, onChange }: { lesson: any; onChange: () => void }) {
+function LessonRow({ lesson, index, total, siblings, onChange }: { lesson: any; index: number; total: number; siblings: any[]; onChange: () => void }) {
   const Icon = lesson.type === "presentation" ? FileText : lesson.type === "text" ? FileText : Video;
   const deleteVideo = useServerFn(deleteBunnyVideo);
   const del = async () => {
@@ -180,8 +189,26 @@ function LessonRow({ lesson, onChange }: { lesson: any; onChange: () => void }) 
     if (error) return toast.error(error.message);
     toast.success("Dars o'chirildi"); onChange();
   };
+  const move = async (dir: -1 | 1) => {
+    const swap = siblings[index + dir];
+    if (!swap) return;
+    // Use a temporary position to avoid unique-constraint conflicts if any
+    const tmp = -1 * (Date.now() % 100000);
+    const a = await supabase.from("lessons").update({ position: tmp }).eq("id", lesson.id);
+    if (a.error) return toast.error(a.error.message);
+    const b = await supabase.from("lessons").update({ position: lesson.position }).eq("id", swap.id);
+    if (b.error) return toast.error(b.error.message);
+    const c = await supabase.from("lessons").update({ position: swap.position }).eq("id", lesson.id);
+    if (c.error) return toast.error(c.error.message);
+    onChange();
+  };
   return (
     <li className="flex items-center gap-3 px-4 py-3">
+      <div className="flex flex-col">
+        <Button variant="ghost" size="icon" className="h-5 w-5" disabled={index === 0} onClick={() => move(-1)}><ArrowUp className="h-3 w-3" /></Button>
+        <Button variant="ghost" size="icon" className="h-5 w-5" disabled={index >= total - 1} onClick={() => move(1)}><ArrowDown className="h-3 w-3" /></Button>
+      </div>
+      <span className="w-5 text-center text-xs font-semibold text-muted-foreground">{index + 1}</span>
       <Icon className="h-4 w-4 text-primary" />
       <div className="flex-1">
         <div className="text-sm font-medium">{lesson.title}</div>
@@ -475,7 +502,7 @@ function MaterialsManager({ lessonId }: { lessonId: string }) {
   );
 }
 
-function AddLessonDialog({ moduleId, courseId, position, onAdded }: { moduleId: string; courseId: string; position: number; onAdded: () => void }) {
+function AddLessonDialog({ moduleId, courseId, onAdded }: { moduleId: string; courseId: string; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [type, setType] = useState<"video" | "presentation" | "text">("video");
@@ -520,12 +547,22 @@ function AddLessonDialog({ moduleId, courseId, position, onAdded }: { moduleId: 
         });
       }
 
+      // Compute next position from DB to avoid race conditions when adding quickly
+      const { data: last } = await supabase
+        .from("lessons")
+        .select("position")
+        .eq("module_id", moduleId)
+        .order("position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextPosition = ((last?.position ?? -1) as number) + 1;
+
       const { error } = await supabase.from("lessons").insert({
         module_id: moduleId,
         course_id: courseId,
         title,
         type,
-        position,
+        position: nextPosition,
         bunny_video_id: bunnyVideoId,
         bunny_library_id: bunnyLibraryId,
       });

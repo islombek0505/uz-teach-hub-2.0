@@ -75,15 +75,12 @@ function CourseDetail() {
 
       const { data: pending } = await supabase.from("payments").select("id, status, created_at").eq("user_id", user!.id).eq("course_id", courseId).eq("status", "pending").order("created_at", { ascending: false }).limit(1);
 
-      let presentations: any[] = [];
-      if (enrolled) {
-        const { data: pres } = await supabase
-          .from("course_presentations")
-          .select("*")
-          .eq("course_id", courseId)
-          .order("position");
-        presentations = pres ?? [];
-      }
+      const { data: pres } = await supabase
+        .from("course_presentations")
+        .select("*")
+        .eq("course_id", courseId)
+        .order("position");
+      const presentations: any[] = pres ?? [];
 
       return { course, enrolled, completedSet, pendingPayment: pending?.[0] ?? null, presentations, tariff: subFull?.tariff ?? null, mentor };
     },
@@ -254,16 +251,18 @@ function CourseDetail() {
           </Accordion>
         </div>
 
-        {enrolled && presentations.length > 0 && (
+        {presentations.length > 0 && (
           <div>
             <div className="mb-3 flex items-center gap-2">
               <Presentation className="h-5 w-5 text-primary" />
               <h2 className="font-display text-xl font-semibold">Takrorlash prezentatsiyalari</h2>
             </div>
-            <p className="mb-3 text-sm text-muted-foreground">Bir nechta darsning qisqacha jamlanmasi. Tez takrorlash uchun.</p>
+            <p className="mb-3 text-sm text-muted-foreground">
+              {enrolled ? "Bir nechta darsning qisqacha jamlanmasi. Tez takrorlash uchun." : "Obuna bo'lgach takrorlash prezentatsiyalari ochiladi."}
+            </p>
             <div className="space-y-4">
               {presentations.map((p: any) => (
-                <CoursePresentationCard key={p.id} item={p} />
+                <CoursePresentationCard key={p.id} item={p} locked={!enrolled} />
               ))}
             </div>
           </div>
@@ -273,24 +272,26 @@ function CourseDetail() {
   );
 }
 
-function CoursePresentationCard({ item }: { item: any }) {
+function CoursePresentationCard({ item, locked = false }: { item: any; locked?: boolean }) {
   const [open, setOpen] = useState(false);
   const slides: string[] = Array.isArray(item.slides) ? item.slides : [];
   return (
     <Card>
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><Presentation className="h-5 w-5" /></div>
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+            {locked ? <Lock className="h-5 w-5" /> : <Presentation className="h-5 w-5" />}
+          </div>
           <div className="min-w-0 flex-1">
             <div className="font-display font-semibold">{item.title}</div>
             {item.description && <div className="text-xs text-muted-foreground">{item.description}</div>}
           </div>
           <Badge variant="outline">{slides.length} slayd</Badge>
-          <Button size="sm" variant={open ? "outline" : "default"} disabled={!slides.length} onClick={() => setOpen((v) => !v)}>
-            {open ? "Yopish" : "Ochish"}
+          <Button size="sm" variant={open ? "outline" : "default"} disabled={!slides.length || locked} onClick={() => setOpen((v) => !v)}>
+            {locked ? "Yopiq" : open ? "Yopish" : "Ochish"}
           </Button>
         </div>
-        {open && slides.length > 0 && <PresentationSlidesViewer slides={slides} title={item.title} />}
+        {!locked && open && slides.length > 0 && <PresentationSlidesViewer slides={slides} title={item.title} />}
       </CardContent>
     </Card>
   );
