@@ -52,17 +52,6 @@ function EditCourse() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin", "course", courseId] });
 
-  // Course settings form
-  const [savingCourse, setSavingCourse] = useState(false);
-  const saveCourse = async (patch: any) => {
-    setSavingCourse(true);
-    const { error } = await supabase.from("courses").update(patch).eq("id", courseId);
-    setSavingCourse(false);
-    if (error) return toast.error(error.message);
-    toast.success("Saqlandi");
-    invalidate();
-  };
-
   const addModule = useMutation({
     mutationFn: async () => {
       const pos = (course?.modules?.length ?? 0);
@@ -103,28 +92,7 @@ function EditCourse() {
       <main className="flex-1 space-y-6 p-4 lg:p-6">
         <Link to="/admin/courses" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Kurslarga qaytish</Link>
 
-        <Card>
-          <CardHeader><CardTitle className="font-display">Kurs sozlamalari</CardTitle></CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2"><CoverUploader courseId={courseId} coverUrl={course.cover_url} onChange={invalidate} /></div>
-            <div className="space-y-2 sm:col-span-2"><Label>Nomi</Label><Input defaultValue={course.title} onBlur={(e) => e.target.value !== course.title && saveCourse({ title: e.target.value })} /></div>
-            <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} defaultValue={course.description ?? ""} onBlur={(e) => e.target.value !== (course.description ?? "") && saveCourse({ description: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Kategoriya</Label><Input defaultValue={course.category ?? ""} onBlur={(e) => e.target.value !== (course.category ?? "") && saveCourse({ category: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Erkin o'rganish narxi (so'm)</Label><Input type="number" defaultValue={course.price_self ?? course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price_self ?? course.price) && saveCourse({ price_self: Number(e.target.value), price: Number(e.target.value) })} /></div>
-            <div className="space-y-2"><Label>Mentor yordami narxi (so'm)</Label><Input type="number" defaultValue={course.price_mentor ?? course.price} onBlur={(e) => Number(e.target.value) !== Number(course.price_mentor ?? course.price) && saveCourse({ price_mentor: Number(e.target.value) })} /></div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <div className="text-sm font-medium">Nashr etilgan</div>
-                <div className="text-xs text-muted-foreground">O'quvchilar ko'rishi mumkin</div>
-              </div>
-              <Switch checked={course.published} onCheckedChange={(v) => saveCourse({ published: v })} />
-            </div>
-            <div className="sm:col-span-2 flex justify-between">
-              <Button variant="destructive" onClick={delCourse}><Trash2 className="mr-2 h-4 w-4" /> Kursni o'chirish</Button>
-              {savingCourse && <span className="text-xs text-muted-foreground self-center">Saqlanmoqda...</span>}
-            </div>
-          </CardContent>
-        </Card>
+        <CourseSettingsCard course={course} onSaved={invalidate} onDelete={delCourse} />
 
         <div>
           <div className="mb-3 flex items-center justify-between">
@@ -136,47 +104,262 @@ function EditCourse() {
             <Card><CardContent className="p-8 text-center text-muted-foreground">Hozircha modullar yo'q. Birinchi modulni qo'shing.</CardContent></Card>
           )}
 
-          <Accordion type="multiple" defaultValue={course.modules.map((m: any) => m.id)} className="space-y-2">
-            {course.modules.map((m: any, idx: number) => (
-              <AccordionItem key={m.id} value={m.id} className="overflow-hidden rounded-lg border bg-card">
-                <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                  <div className="flex w-full items-center gap-3 text-left">
-                    <div className="grid h-8 w-8 place-items-center rounded bg-primary/10 font-display text-sm font-bold text-primary">{idx + 1}</div>
-                    <Input
-                      defaultValue={m.title}
-                      onClick={(e) => e.stopPropagation()}
-                      onBlur={(e) => e.target.value !== m.title && renameModule(m.id, e.target.value)}
-                      className="h-8 flex-1 max-w-md border-none bg-transparent font-display font-semibold shadow-none focus-visible:ring-1"
-                    />
-                    <Badge variant="outline">{m.lessons.length} dars</Badge>
-                    <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); delModule(m.id); }}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="border-t bg-muted/20 px-0 pb-0">
-                  <ul className="divide-y">
-                    {m.lessons.map((l: any, li: number) => (
-                      <LessonRow
-                        key={l.id}
-                        lesson={l}
-                        index={li}
-                        total={m.lessons.length}
-                        siblings={m.lessons}
-                        onChange={invalidate}
-                      />
-                    ))}
-                    <li className="bg-muted/20 px-4 py-3">
-                      <AddLessonDialog moduleId={m.id} courseId={courseId} onAdded={invalidate} />
-                    </li>
-                  </ul>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          <ModulesEditor
+            modules={course.modules}
+            courseId={courseId}
+            onChange={invalidate}
+            onRenameModule={renameModule}
+            onDeleteModule={delModule}
+          />
         </div>
 
         <CoursePresentationsManager courseId={courseId} />
       </main>
     </>
+  );
+}
+
+function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSaved: () => void; onDelete: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    title: course.title ?? "",
+    description: course.description ?? "",
+    category: course.category ?? "",
+    price_self: Number(course.price_self ?? course.price ?? 0),
+    price_mentor: Number(course.price_mentor ?? course.price ?? 0),
+    published: !!course.published,
+  });
+
+  useEffect(() => {
+    setForm({
+      title: course.title ?? "",
+      description: course.description ?? "",
+      category: course.category ?? "",
+      price_self: Number(course.price_self ?? course.price ?? 0),
+      price_mentor: Number(course.price_mentor ?? course.price ?? 0),
+      published: !!course.published,
+    });
+  }, [course.id, course.updated_at]);
+
+  const save = async () => {
+    setBusy(true);
+    const { error } = await supabase.from("courses").update({
+      title: form.title,
+      description: form.description || null,
+      category: form.category || null,
+      price_self: form.price_self,
+      price: form.price_self,
+      price_mentor: form.price_mentor,
+      published: form.published,
+    }).eq("id", course.id);
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Sozlamalar saqlandi");
+    onSaved();
+    setEditing(false);
+  };
+
+  if (!editing) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle className="font-display">Kurs sozlamalari</CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}><Pencil className="mr-2 h-3.5 w-3.5" /> Tahrirlash</Button>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div className="sm:col-span-1">
+            <CoverPreview coverUrl={course.cover_url} />
+          </div>
+          <div className="space-y-3 sm:col-span-2">
+            <div>
+              <div className="text-xs uppercase text-muted-foreground">Nomi</div>
+              <div className="font-display text-lg font-semibold">{course.title}</div>
+            </div>
+            {course.description && (
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Tavsif</div>
+                <p className="text-sm text-muted-foreground">{course.description}</p>
+              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Kategoriya</div>
+                <div className="text-sm">{course.category || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Erkin narx</div>
+                <div className="text-sm">{Number(course.price_self ?? course.price ?? 0).toLocaleString()} so'm</div>
+              </div>
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Mentor narx</div>
+                <div className="text-sm">{Number(course.price_mentor ?? course.price ?? 0).toLocaleString()} so'm</div>
+              </div>
+            </div>
+            <div>
+              <Badge variant={course.published ? "default" : "secondary"}>{course.published ? "Nashr etilgan" : "Qoralama"}</Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+        <CardTitle className="font-display">Kurs sozlamalari</CardTitle>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={busy}><X className="mr-1 h-3.5 w-3.5" /> Bekor</Button>
+          <Button size="sm" onClick={save} disabled={busy}><Save className="mr-2 h-3.5 w-3.5" /> {busy ? "Saqlanmoqda..." : "Saqlash"}</Button>
+        </div>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2"><CoverUploader courseId={course.id} coverUrl={course.cover_url} onChange={onSaved} /></div>
+        <div className="space-y-2 sm:col-span-2"><Label>Nomi</Label><Input value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} /></div>
+        <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} /></div>
+        <div className="space-y-2"><Label>Kategoriya</Label><Input value={form.category} onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))} /></div>
+        <div className="space-y-2"><Label>Erkin o'rganish narxi (so'm)</Label><Input type="number" value={form.price_self} onChange={(e) => setForm((s) => ({ ...s, price_self: Number(e.target.value) }))} /></div>
+        <div className="space-y-2"><Label>Mentor yordami narxi (so'm)</Label><Input type="number" value={form.price_mentor} onChange={(e) => setForm((s) => ({ ...s, price_mentor: Number(e.target.value) }))} /></div>
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div>
+            <div className="text-sm font-medium">Nashr etilgan</div>
+            <div className="text-xs text-muted-foreground">O'quvchilar ko'rishi mumkin</div>
+          </div>
+          <Switch checked={form.published} onCheckedChange={(v) => setForm((s) => ({ ...s, published: v }))} />
+        </div>
+        <div className="sm:col-span-2 flex justify-between border-t pt-4">
+          <Button variant="destructive" onClick={onDelete}><Trash2 className="mr-2 h-4 w-4" /> Kursni o'chirish</Button>
+          <Button onClick={save} disabled={busy}><Save className="mr-2 h-4 w-4" /> {busy ? "Saqlanmoqda..." : "Saqlash"}</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CoverPreview({ coverUrl }: { coverUrl: string | null }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let off = false;
+    (async () => {
+      if (!coverUrl) { setUrl(null); return; }
+      if (coverUrl.startsWith("http")) { setUrl(coverUrl); return; }
+      const { data } = await supabase.storage.from("course-covers").createSignedUrl(coverUrl, 60 * 60);
+      if (!off) setUrl(data?.signedUrl ?? null);
+    })();
+    return () => { off = true; };
+  }, [coverUrl]);
+  return (
+    <div className="aspect-[16/9] overflow-hidden rounded-lg border bg-muted">
+      {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-muted-foreground"><ImageIcon className="h-8 w-8" /></div>}
+    </div>
+  );
+}
+
+function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteModule }: {
+  modules: any[]; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const ids = modules.map((m) => m.id);
+
+  const handleEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    const ordered = arrayMove(modules, oldIdx, newIdx);
+    // 2-phase: temp negative, then final
+    await Promise.all(ordered.map((m, i) => supabase.from("modules").update({ position: -(i + 1) }).eq("id", m.id)));
+    await Promise.all(ordered.map((m, i) => supabase.from("modules").update({ position: i }).eq("id", m.id)));
+    onChange();
+  };
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <Accordion type="multiple" defaultValue={ids} className="space-y-2">
+          {modules.map((m, idx) => (
+            <SortableModule
+              key={m.id}
+              m={m}
+              idx={idx}
+              courseId={courseId}
+              onChange={onChange}
+              onRenameModule={onRenameModule}
+              onDeleteModule={onDeleteModule}
+            />
+          ))}
+        </Accordion>
+      </SortableContext>
+    </DndContext>
+  );
+}
+
+function SortableModule({ m, idx, courseId, onChange, onRenameModule, onDeleteModule }: {
+  m: any; idx: number; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: m.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <AccordionItem value={m.id} className="overflow-hidden rounded-lg border bg-card">
+        <AccordionTrigger className="px-2 py-3 hover:no-underline">
+          <div className="flex w-full items-center gap-2 text-left">
+            <button
+              type="button"
+              {...attributes}
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
+              className="cursor-grab touch-none p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+              aria-label="Tartiblash"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <div className="grid h-8 w-8 place-items-center rounded bg-primary/10 font-display text-sm font-bold text-primary">{idx + 1}</div>
+            <Input
+              defaultValue={m.title}
+              onClick={(e) => e.stopPropagation()}
+              onBlur={(e) => e.target.value !== m.title && onRenameModule(m.id, e.target.value)}
+              className="h-8 flex-1 max-w-md border-none bg-transparent font-display font-semibold shadow-none focus-visible:ring-1"
+            />
+            <Badge variant="outline">{m.lessons.length} dars</Badge>
+            <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteModule(m.id); }}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="border-t bg-muted/20 px-0 pb-0">
+          <SortableLessons lessons={m.lessons} onChange={onChange} />
+          <div className="bg-muted/20 px-4 py-3">
+            <AddLessonDialog moduleId={m.id} courseId={courseId} onAdded={onChange} />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+    </div>
+  );
+}
+
+function SortableLessons({ lessons, onChange }: { lessons: any[]; onChange: () => void }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+  const ids = lessons.map((l) => l.id);
+  const handleEnd = async (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    const ordered = arrayMove(lessons, oldIdx, newIdx);
+    await Promise.all(ordered.map((l, i) => supabase.from("lessons").update({ position: -(i + 1) }).eq("id", l.id)));
+    await Promise.all(ordered.map((l, i) => supabase.from("lessons").update({ position: i }).eq("id", l.id)));
+    onChange();
+  };
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleEnd}>
+      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+        <ul className="divide-y">
+          {lessons.map((l, li) => (
+            <LessonRow key={l.id} lesson={l} index={li} onChange={onChange} />
+          ))}
+        </ul>
+      </SortableContext>
+    </DndContext>
   );
 }
 
