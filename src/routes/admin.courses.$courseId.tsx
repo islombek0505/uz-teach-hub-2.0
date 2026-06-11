@@ -363,9 +363,11 @@ function SortableLessons({ lessons, onChange }: { lessons: any[]; onChange: () =
   );
 }
 
-function LessonRow({ lesson, index, total, siblings, onChange }: { lesson: any; index: number; total: number; siblings: any[]; onChange: () => void }) {
+function LessonRow({ lesson, index, onChange }: { lesson: any; index: number; onChange: () => void }) {
   const Icon = lesson.type === "presentation" ? FileText : lesson.type === "text" ? FileText : Video;
   const deleteVideo = useServerFn(deleteBunnyVideo);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lesson.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
   const del = async () => {
     if (!confirm(`"${lesson.title}" darsi o'chirilsinmi?`)) return;
     if (lesson.bunny_video_id) {
@@ -375,25 +377,17 @@ function LessonRow({ lesson, index, total, siblings, onChange }: { lesson: any; 
     if (error) return toast.error(error.message);
     toast.success("Dars o'chirildi"); onChange();
   };
-  const move = async (dir: -1 | 1) => {
-    const swap = siblings[index + dir];
-    if (!swap) return;
-    // Use a temporary position to avoid unique-constraint conflicts if any
-    const tmp = -1 * (Date.now() % 100000);
-    const a = await supabase.from("lessons").update({ position: tmp }).eq("id", lesson.id);
-    if (a.error) return toast.error(a.error.message);
-    const b = await supabase.from("lessons").update({ position: lesson.position }).eq("id", swap.id);
-    if (b.error) return toast.error(b.error.message);
-    const c = await supabase.from("lessons").update({ position: swap.position }).eq("id", lesson.id);
-    if (c.error) return toast.error(c.error.message);
-    onChange();
-  };
   return (
-    <li className="flex items-center gap-3 px-4 py-3">
-      <div className="flex flex-col">
-        <Button variant="ghost" size="icon" className="h-5 w-5" disabled={index === 0} onClick={() => move(-1)}><ArrowUp className="h-3 w-3" /></Button>
-        <Button variant="ghost" size="icon" className="h-5 w-5" disabled={index >= total - 1} onClick={() => move(1)}><ArrowDown className="h-3 w-3" /></Button>
-      </div>
+    <li ref={setNodeRef} style={style} className="flex items-center gap-3 px-4 py-3 bg-card">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab touch-none p-1 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        aria-label="Tartiblash"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
       <span className="w-5 text-center text-xs font-semibold text-muted-foreground">{index + 1}</span>
       <Icon className="h-4 w-4 text-primary" />
       <div className="flex-1">
