@@ -261,7 +261,7 @@ function CourseDetail() {
                             </button>
                           </div>
                           {expanded && (
-                            <div className="space-y-3 pb-5 pl-13 sm:pl-14">
+                            <div className="space-y-3 pb-5 pl-[52px]">
                               {l.description && !locked && (
                                 <p className="text-sm text-muted-foreground">{l.description}</p>
                               )}
