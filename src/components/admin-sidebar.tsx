@@ -24,6 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth";
 
@@ -43,7 +44,10 @@ const items = [
 export function AdminSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeOnMobile = () => { if (isMobile) setOpenMobile(false); };
   const handleLogout = async () => {
+    closeOnMobile();
     await signOut();
     navigate({ to: "/auth/login" });
   };
@@ -51,11 +55,11 @@ export function AdminSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/admin" className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+        <Link to="/admin" onClick={closeOnMobile} className="flex items-center gap-2 px-2 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <Shield className="h-5 w-5" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-display text-base font-semibold text-sidebar-foreground">LearnHub</span>
             <span className="text-xs text-sidebar-foreground/60">Admin paneli</span>
           </div>
@@ -71,7 +75,7 @@ export function AdminSidebar() {
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active}>
-                      <Link to={item.url} className="flex items-center gap-3">
+                      <Link to={item.url} onClick={closeOnMobile} className="flex items-center gap-3">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
