@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { PlayCircle, FileText, CheckCircle2, Lock, BookOpen, Upload, CreditCard, Presentation, UserCheck, Send, Instagram } from "lucide-react";
+import { PlayCircle, FileText, CheckCircle2, Lock, BookOpen, Upload, CreditCard, Presentation, UserCheck, Send, Instagram, Plus, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -97,6 +96,11 @@ function CourseDetail() {
   // All lessons are open once enrolled — no strict gating.
   const access: Record<string, "done" | "current"> = {};
   for (const l of allLessons) access[l.id] = completedSet.has(l.id) ? "done" : "current";
+
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(course.modules[0]?.id ?? null);
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
+  // Reset when course changes
+  const activeModule = course.modules.find((m: any) => m.id === activeModuleId) ?? course.modules[0];
 
   return (
     <>
@@ -198,57 +202,96 @@ function CourseDetail() {
         )}
 
         <div>
-          <h2 className="mb-3 font-display text-xl font-semibold">Modullar</h2>
+          <h2 className="mb-4 font-display text-xl font-semibold">Modullar</h2>
           {course.modules.length === 0 && (
             <Card><CardContent className="p-10 text-center text-muted-foreground">Bu kursda hali modullar qo'shilmagan</CardContent></Card>
           )}
-          <Accordion type="multiple" defaultValue={course.modules.map((m: any) => m.id)} className="space-y-2">
-            {course.modules.map((m: any, idx: number) => {
-              const mDone = m.lessons.filter((l: any) => completedSet.has(l.id)).length;
-              return (
-                <AccordionItem key={m.id} value={m.id} className="overflow-hidden rounded-lg border bg-card">
-                  <AccordionTrigger className="px-4 py-4 hover:no-underline">
-                    <div className="flex w-full items-center gap-3 text-left">
-                      <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-primary/10 font-display font-bold text-primary">{idx + 1}</div>
-                      <div className="flex-1">
-                        <div className="font-display font-semibold">{m.title}</div>
-                        <div className="text-xs text-muted-foreground">{m.lessons.length} dars • {mDone}/{m.lessons.length} yakunlangan</div>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="border-t bg-muted/20 px-0 pb-0">
-                    <ul className="divide-y">
-                      {m.lessons.map((l: any, li: number) => {
-                        const status = access[l.id];
-                          const locked = !enrolled;
-                        const Icon = l.type === "presentation" || l.type === "text" ? FileText : PlayCircle;
-                        const inner = (
-                          <>
-                            {status === "done" ? <CheckCircle2 className="h-5 w-5 text-success" /> : locked ? <Lock className="h-5 w-5 text-muted-foreground" /> : <Icon className="h-5 w-5 text-primary" />}
-                            <div className="flex-1">
-                              <div className="text-sm font-medium">{li + 1}. {l.title}</div>
-                              <div className="text-xs text-muted-foreground capitalize">
-                                  {l.type}{l.has_quiz && " • Test bor"}{locked && " • Yopiq"}
-                              </div>
+
+          {course.modules.length > 0 && (
+            <div className="rounded-2xl border bg-card p-4 sm:p-6">
+              {/* Module tabs */}
+              <div className="-mx-2 mb-2 flex gap-5 overflow-x-auto px-2 pb-2 sm:gap-8">
+                {course.modules.map((m: any, idx: number) => {
+                  const isActive = activeModule?.id === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => { setActiveModuleId(m.id); setExpandedLessonId(null); }}
+                      className={`shrink-0 font-display text-lg font-bold tracking-tight transition-colors sm:text-2xl ${
+                        isActive ? "text-foreground" : "text-muted-foreground/50 hover:text-muted-foreground"
+                      }`}
+                    >
+                      {idx + 1}-modul
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeModule && (
+                <div className="border-t">
+                  {activeModule.lessons.length === 0 && (
+                    <div className="py-10 text-center text-sm text-muted-foreground">Bu modulda hali darslar yo'q.</div>
+                  )}
+                  <ul>
+                    {activeModule.lessons.map((l: any, li: number) => {
+                      const locked = !enrolled;
+                      const done = completedSet.has(l.id);
+                      const expanded = expandedLessonId === l.id;
+                      const TypeIcon = l.type === "presentation" || l.type === "text" ? FileText : PlayCircle;
+                      return (
+                        <li key={l.id} className="border-b last:border-b-0">
+                          <div className="flex items-center gap-4 py-4">
+                            <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-full font-display text-sm font-bold transition-colors ${
+                              done ? "bg-success text-success-foreground" : expanded ? "bg-foreground text-background" : "bg-muted text-foreground"
+                            }`}>
+                              {done ? <CheckCircle2 className="h-4 w-4" /> : li + 1}
                             </div>
-                          </>
-                        );
-                        return (
-                          <li key={l.id}>
-                            {locked ? (
-                              <div className="flex items-center gap-3 px-4 py-3 opacity-60">{inner}</div>
-                            ) : (
-                              <Link to="/app/courses/$courseId/lessons/$lessonId" params={{ courseId: course.id, lessonId: l.id }} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50">{inner}</Link>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-          </Accordion>
+                            <button
+                              onClick={() => setExpandedLessonId(expanded ? null : l.id)}
+                              className="min-w-0 flex-1 truncate text-left font-display text-base font-semibold sm:text-lg"
+                            >
+                              {l.title}
+                            </button>
+                            <button
+                              onClick={() => setExpandedLessonId(expanded ? null : l.id)}
+                              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-foreground/70 transition-colors hover:bg-muted"
+                              aria-label={expanded ? "Yopish" : "Ochish"}
+                            >
+                              {expanded ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            </button>
+                          </div>
+                          {expanded && (
+                            <div className="space-y-3 pb-5 pl-13 sm:pl-14">
+                              {l.description && !locked && (
+                                <p className="text-sm text-muted-foreground">{l.description}</p>
+                              )}
+                              <LessonSubRow
+                                icon={<TypeIcon className="h-4 w-4" />}
+                                label={l.type === "video" ? "Video darslik" : l.type === "presentation" ? "Prezentatsiya" : "Matn darslik"}
+                                locked={locked}
+                                href={!locked ? { courseId: course.id, lessonId: l.id } : undefined}
+                              />
+                              {l.has_quiz && (
+                                <LessonSubRow
+                                  icon={<FileText className="h-4 w-4" />}
+                                  label="Yakuniy test"
+                                  locked={locked}
+                                  href={!locked ? { courseId: course.id, lessonId: l.id } : undefined}
+                                />
+                              )}
+                              {locked && (
+                                <p className="text-xs text-muted-foreground">Bu darslikni ochish uchun kursga obuna bo'ling.</p>
+                              )}
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {presentations.length > 0 && (
@@ -270,6 +313,21 @@ function CourseDetail() {
       </main>
     </>
   );
+}
+
+function LessonSubRow({ icon, label, locked, href }: { icon: React.ReactNode; label: string; locked: boolean; href?: { courseId: string; lessonId: string } }) {
+  const inner = (
+    <div className={`flex items-center gap-4 rounded-lg px-3 py-2 transition-colors ${locked ? "opacity-70" : "hover:bg-muted"}`}>
+      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-md border">
+        {locked ? <Lock className="h-3.5 w-3.5 text-muted-foreground" /> : icon}
+      </div>
+      <div className="min-w-0 flex-1 text-sm font-medium">{label}</div>
+    </div>
+  );
+  if (!locked && href) {
+    return <Link to="/app/courses/$courseId/lessons/$lessonId" params={href}>{inner}</Link>;
+  }
+  return inner;
 }
 
 function CoursePresentationCard({ item, locked = false }: { item: any; locked?: boolean }) {
