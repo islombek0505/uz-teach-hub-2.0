@@ -21,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/auth";
 import { useEffect, useState } from "react";
@@ -40,6 +41,8 @@ export function StudentSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const closeOnMobile = () => { if (isMobile) setOpenMobile(false); };
   const [isMentor, setIsMentor] = useState(false);
   useEffect(() => {
     if (!user) return;
@@ -59,6 +62,7 @@ export function StudentSidebar() {
     : baseItems;
 
   const handleLogout = async () => {
+    closeOnMobile();
     await signOut();
     navigate({ to: "/auth/login" });
   };
@@ -66,11 +70,11 @@ export function StudentSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/app" className="flex items-center gap-2 px-2 py-3">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+        <Link to="/app" onClick={closeOnMobile} className="flex items-center gap-2 px-2 py-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-display text-base font-semibold text-sidebar-foreground">LearnHub</span>
             <span className="text-xs text-sidebar-foreground/60">O'quvchi paneli</span>
           </div>
@@ -86,7 +90,7 @@ export function StudentSidebar() {
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={active}>
-                      <Link to={item.url} className="flex items-center gap-3">
+                      <Link to={item.url} onClick={closeOnMobile} className="flex items-center gap-3">
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </Link>
