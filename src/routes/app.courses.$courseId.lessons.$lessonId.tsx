@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Eye, Presentation } from "lucide-react";
@@ -297,31 +298,13 @@ function LessonPlayer() {
             <Card>
               <CardContent className="p-4">
                 <h3 className="mb-3 font-display font-semibold">Kurs darslari</h3>
-                <div className="space-y-4">
-                  {course.modules.map((m: any) => (
-                    <div key={m.id}>
-                      <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">{m.title}</div>
-                      <ul className="space-y-1">
-                        {m.lessons.map((l: any) => {
-                          const active = l.id === lessonId;
-                          const done = completedSet.has(l.id);
-                          return (
-                            <li key={l.id}>
-                              <Link
-                                to="/app/courses/$courseId/lessons/$lessonId"
-                                params={{ courseId, lessonId: l.id }}
-                                className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                              >
-                                {done ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 flex-shrink-0 opacity-60" />}
-                                <span className="flex-1 truncate">{l.title}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
+                <LessonSidebarAccordion
+                  modules={course.modules}
+                  courseId={courseId}
+                  currentLessonId={lessonId}
+                  currentModuleId={lesson.module_id ?? course.modules.find((m: any) => m.lessons.some((l: any) => l.id === lessonId))?.id}
+                  completedSet={completedSet}
+                />
               </CardContent>
             </Card>
           </aside>
@@ -387,5 +370,61 @@ function MaterialItem({ material }: { material: any }) {
         </div>
       )}
     </div>
+  );
+}
+
+function LessonSidebarAccordion({
+  modules, courseId, currentLessonId, currentModuleId, completedSet,
+}: {
+  modules: any[]; courseId: string; currentLessonId: string; currentModuleId: string | undefined; completedSet: Set<string>;
+}) {
+  const [openIds, setOpenIds] = useState<string[]>(currentModuleId ? [currentModuleId] : []);
+  useEffect(() => {
+    if (currentModuleId && !openIds.includes(currentModuleId)) setOpenIds((v) => [...v, currentModuleId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentModuleId]);
+  return (
+    <Accordion type="multiple" value={openIds} onValueChange={setOpenIds} className="space-y-2">
+      {modules.map((m: any) => {
+        const isCurrent = m.id === currentModuleId;
+        const total = m.lessons.length;
+        const done = m.lessons.filter((l: any) => completedSet.has(l.id)).length;
+        return (
+          <AccordionItem
+            key={m.id}
+            value={m.id}
+            className={`overflow-hidden rounded-lg border ${isCurrent ? "border-primary/60 bg-primary/5 ring-1 ring-primary/30" : "bg-card"}`}
+          >
+            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+              <div className="flex w-full min-w-0 items-center gap-2 text-left">
+                {isCurrent && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-hidden />}
+                <span className={`truncate text-sm font-medium ${isCurrent ? "text-primary" : ""}`}>{m.title}</span>
+                <span className="ml-auto shrink-0 text-xs text-muted-foreground">{done}/{total}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-2 pb-2">
+              <ul className="space-y-1">
+                {m.lessons.map((l: any) => {
+                  const active = l.id === currentLessonId;
+                  const lDone = completedSet.has(l.id);
+                  return (
+                    <li key={l.id}>
+                      <Link
+                        to="/app/courses/$courseId/lessons/$lessonId"
+                        params={{ courseId, lessonId: l.id }}
+                        className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                      >
+                        {lDone ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 flex-shrink-0 opacity-60" />}
+                        <span className="flex-1 truncate">{l.title}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
   );
 }

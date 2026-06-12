@@ -360,6 +360,7 @@ export type Database = {
         Row: {
           course_id: string
           created_at: string
+          description: string | null
           id: string
           position: number
           title: string
@@ -367,6 +368,7 @@ export type Database = {
         Insert: {
           course_id: string
           created_at?: string
+          description?: string | null
           id?: string
           position?: number
           title: string
@@ -374,6 +376,7 @@ export type Database = {
         Update: {
           course_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           position?: number
           title?: string

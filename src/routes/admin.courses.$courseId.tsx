@@ -52,16 +52,6 @@ function EditCourse() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin", "course", courseId] });
 
-  const addModule = useMutation({
-    mutationFn: async () => {
-      const pos = (course?.modules?.length ?? 0);
-      const { error } = await supabase.from("modules").insert({ course_id: courseId, title: `Modul ${pos + 1}`, position: pos });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Modul qo'shildi"); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const delModule = async (id: string) => {
     if (!confirm("Modulni va undagi barcha darslarni o'chirishni tasdiqlaysizmi?")) return;
     const { error } = await supabase.from("modules").delete().eq("id", id);
@@ -69,8 +59,8 @@ function EditCourse() {
     toast.success("O'chirildi"); invalidate();
   };
 
-  const renameModule = async (id: string, title: string) => {
-    const { error } = await supabase.from("modules").update({ title }).eq("id", id);
+  const updateModule = async (id: string, patch: { title?: string; description?: string | null }) => {
+    const { error } = await supabase.from("modules").update(patch).eq("id", id);
     if (error) toast.error(error.message); else invalidate();
   };
 
@@ -97,7 +87,7 @@ function EditCourse() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-xl font-semibold">Modullar va darslar</h2>
-            <Button onClick={() => addModule.mutate()} disabled={addModule.isPending}><Plus className="mr-2 h-4 w-4" /> Modul</Button>
+            <AddModuleDialog courseId={courseId} nextPosition={course.modules.length} onAdded={invalidate} />
           </div>
 
           {course.modules.length === 0 && (
@@ -108,7 +98,7 @@ function EditCourse() {
             modules={course.modules}
             courseId={courseId}
             onChange={invalidate}
-            onRenameModule={renameModule}
+            onUpdateModule={updateModule}
             onDeleteModule={delModule}
           />
         </div>
@@ -256,8 +246,8 @@ function CoverPreview({ coverUrl }: { coverUrl: string | null }) {
   );
 }
 
-function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteModule }: {
-  modules: any[]; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+function ModulesEditor({ modules, courseId, onChange, onUpdateModule, onDeleteModule }: {
+  modules: any[]; courseId: string; onChange: () => void; onUpdateModule: (id: string, patch: { title?: string; description?: string | null }) => void; onDeleteModule: (id: string) => void;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const ids = modules.map((m) => m.id);
@@ -285,7 +275,7 @@ function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteMo
               idx={idx}
               courseId={courseId}
               onChange={onChange}
-              onRenameModule={onRenameModule}
+              onUpdateModule={onUpdateModule}
               onDeleteModule={onDeleteModule}
             />
           ))}
@@ -295,8 +285,8 @@ function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteMo
   );
 }
 
-function SortableModule({ m, idx, courseId, onChange, onRenameModule, onDeleteModule }: {
-  m: any; idx: number; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+function SortableModule({ m, idx, courseId, onChange, onUpdateModule, onDeleteModule }: {
+  m: any; idx: number; courseId: string; onChange: () => void; onUpdateModule: (id: string, patch: { title?: string; description?: string | null }) => void; onDeleteModule: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: m.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
@@ -316,13 +306,12 @@ function SortableModule({ m, idx, courseId, onChange, onRenameModule, onDeleteMo
               <GripVertical className="h-4 w-4" />
             </button>
             <div className="grid h-8 w-8 place-items-center rounded bg-primary/10 font-display text-sm font-bold text-primary">{idx + 1}</div>
-            <Input
-              defaultValue={m.title}
-              onClick={(e) => e.stopPropagation()}
-              onBlur={(e) => e.target.value !== m.title && onRenameModule(m.id, e.target.value)}
-              className="h-8 flex-1 max-w-md border-none bg-transparent font-display font-semibold shadow-none focus-visible:ring-1"
-            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate font-display text-sm font-semibold">{m.title}</span>
+              {m.description && <span className="truncate text-xs text-muted-foreground">{m.description}</span>}
+            </div>
             <Badge variant="outline">{m.lessons.length} dars</Badge>
+            <EditModuleDialog m={m} onSaved={(p: { title?: string; description?: string | null }) => onUpdateModule(m.id, p)} />
             <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteModule(m.id); }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </AccordionTrigger>
@@ -612,6 +601,71 @@ function LessonEditDialog({ lesson, onChange }: { lesson: any; onChange: () => v
           <DialogFooter>
             <Button type="submit" disabled={busy}><Save className="mr-2 h-4 w-4" /> {busy ? "Saqlanmoqda..." : "Saqlash"}</Button>
           </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddModuleDialog({ courseId, nextPosition, onAdded }: { courseId: string; nextPosition: number; onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    const { error } = await supabase.from("modules").insert({
+      course_id: courseId,
+      title: title.trim(),
+      description: description.trim() || null,
+      position: nextPosition,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Modul qo'shildi");
+    setTitle(""); setDescription(""); setOpen(false); onAdded();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> Modul</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Yangi modul</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2"><Label>Modul nomi</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Masalan: ReactJS asoslari" required /></div>
+          <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Bu modulda nimalar o'rganiladi?" /></div>
+          <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Saqlanmoqda..." : "Qo'shish"}</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditModuleDialog({ m, onSaved }: { m: any; onSaved: (patch: { title?: string; description?: string | null }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(m.title ?? "");
+  const [description, setDescription] = useState(m.description ?? "");
+  useEffect(() => { setTitle(m.title ?? ""); setDescription(m.description ?? ""); }, [m.title, m.description]);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSaved({ title: title.trim(), description: description.trim() || null });
+    setOpen(false);
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()} aria-label="Modulni tahrirlash">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
+        <DialogHeader><DialogTitle>Modulni tahrirlash</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2"><Label>Modul nomi</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+          <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Bu modulda nimalar o'rganiladi?" /></div>
+          <DialogFooter><Button type="submit">Saqlash</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
