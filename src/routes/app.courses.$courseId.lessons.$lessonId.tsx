@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, ShieldCheck, ListChecks, Paperclip, Eye, Presentation } from "lucide-react";
@@ -297,31 +298,13 @@ function LessonPlayer() {
             <Card>
               <CardContent className="p-4">
                 <h3 className="mb-3 font-display font-semibold">Kurs darslari</h3>
-                <div className="space-y-4">
-                  {course.modules.map((m: any) => (
-                    <div key={m.id}>
-                      <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">{m.title}</div>
-                      <ul className="space-y-1">
-                        {m.lessons.map((l: any) => {
-                          const active = l.id === lessonId;
-                          const done = completedSet.has(l.id);
-                          return (
-                            <li key={l.id}>
-                              <Link
-                                to="/app/courses/$courseId/lessons/$lessonId"
-                                params={{ courseId, lessonId: l.id }}
-                                className={`flex items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors ${active ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                              >
-                                {done ? <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-success" /> : <PlayCircle className="h-4 w-4 flex-shrink-0 opacity-60" />}
-                                <span className="flex-1 truncate">{l.title}</span>
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
+                <LessonSidebarAccordion
+                  modules={course.modules}
+                  courseId={courseId}
+                  currentLessonId={lessonId}
+                  currentModuleId={lesson.module_id ?? course.modules.find((m: any) => m.lessons.some((l: any) => l.id === lessonId))?.id}
+                  completedSet={completedSet}
+                />
               </CardContent>
             </Card>
           </aside>
