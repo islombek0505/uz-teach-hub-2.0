@@ -607,6 +607,71 @@ function LessonEditDialog({ lesson, onChange }: { lesson: any; onChange: () => v
   );
 }
 
+function AddModuleDialog({ courseId, nextPosition, onAdded }: { courseId: string; nextPosition: number; onAdded: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    const { error } = await supabase.from("modules").insert({
+      course_id: courseId,
+      title: title.trim(),
+      description: description.trim() || null,
+      position: nextPosition,
+    });
+    setBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success("Modul qo'shildi");
+    setTitle(""); setDescription(""); setOpen(false); onAdded();
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" /> Modul</Button></DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Yangi modul</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2"><Label>Modul nomi</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Masalan: ReactJS asoslari" required /></div>
+          <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Bu modulda nimalar o'rganiladi?" /></div>
+          <DialogFooter><Button type="submit" disabled={busy}>{busy ? "Saqlanmoqda..." : "Qo'shish"}</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditModuleDialog({ m, onSaved }: { m: any; onSaved: (patch: { title?: string; description?: string | null }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(m.title ?? "");
+  const [description, setDescription] = useState(m.description ?? "");
+  useEffect(() => { setTitle(m.title ?? ""); setDescription(m.description ?? ""); }, [m.title, m.description]);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    onSaved({ title: title.trim(), description: description.trim() || null });
+    setOpen(false);
+  };
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()} aria-label="Modulni tahrirlash">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
+        <DialogHeader><DialogTitle>Modulni tahrirlash</DialogTitle></DialogHeader>
+        <form onSubmit={submit} className="space-y-4">
+          <div className="space-y-2"><Label>Modul nomi</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} required /></div>
+          <div className="space-y-2"><Label>Tavsif</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Bu modulda nimalar o'rganiladi?" /></div>
+          <DialogFooter><Button type="submit">Saqlash</Button></DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function MaterialsManager({ lessonId }: { lessonId: string }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
