@@ -85,6 +85,9 @@ function CourseDetail() {
     },
   });
 
+  const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
+  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
+
   if (isLoading || !data) return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
   const { course, enrolled, completedSet, pendingPayment, presentations, tariff, mentor } = data;
 
@@ -97,9 +100,6 @@ function CourseDetail() {
   const access: Record<string, "done" | "current"> = {};
   for (const l of allLessons) access[l.id] = completedSet.has(l.id) ? "done" : "current";
 
-  const [activeModuleId, setActiveModuleId] = useState<string | null>(course.modules[0]?.id ?? null);
-  const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
-  // Reset when course changes
   const activeModule = course.modules.find((m: any) => m.id === activeModuleId) ?? course.modules[0];
 
   return (
