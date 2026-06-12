@@ -311,7 +311,7 @@ function SortableModule({ m, idx, courseId, onChange, onUpdateModule, onDeleteMo
               {m.description && <span className="truncate text-xs text-muted-foreground">{m.description}</span>}
             </div>
             <Badge variant="outline">{m.lessons.length} dars</Badge>
-            <EditModuleDialog m={m} onSaved={(p) => onUpdateModule(m.id, p)} />
+            <EditModuleDialog m={m} onSaved={(p: { title?: string; description?: string | null }) => onUpdateModule(m.id, p)} />
             <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteModule(m.id); }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </AccordionTrigger>
