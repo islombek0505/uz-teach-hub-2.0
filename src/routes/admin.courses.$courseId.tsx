@@ -52,16 +52,6 @@ function EditCourse() {
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["admin", "course", courseId] });
 
-  const addModule = useMutation({
-    mutationFn: async () => {
-      const pos = (course?.modules?.length ?? 0);
-      const { error } = await supabase.from("modules").insert({ course_id: courseId, title: `Modul ${pos + 1}`, position: pos });
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Modul qo'shildi"); invalidate(); },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const delModule = async (id: string) => {
     if (!confirm("Modulni va undagi barcha darslarni o'chirishni tasdiqlaysizmi?")) return;
     const { error } = await supabase.from("modules").delete().eq("id", id);
@@ -69,8 +59,8 @@ function EditCourse() {
     toast.success("O'chirildi"); invalidate();
   };
 
-  const renameModule = async (id: string, title: string) => {
-    const { error } = await supabase.from("modules").update({ title }).eq("id", id);
+  const updateModule = async (id: string, patch: { title?: string; description?: string | null }) => {
+    const { error } = await supabase.from("modules").update(patch).eq("id", id);
     if (error) toast.error(error.message); else invalidate();
   };
 
@@ -97,7 +87,7 @@ function EditCourse() {
         <div>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-display text-xl font-semibold">Modullar va darslar</h2>
-            <Button onClick={() => addModule.mutate()} disabled={addModule.isPending}><Plus className="mr-2 h-4 w-4" /> Modul</Button>
+            <AddModuleDialog courseId={courseId} nextPosition={course.modules.length} onAdded={invalidate} />
           </div>
 
           {course.modules.length === 0 && (
@@ -108,7 +98,7 @@ function EditCourse() {
             modules={course.modules}
             courseId={courseId}
             onChange={invalidate}
-            onRenameModule={renameModule}
+            onUpdateModule={updateModule}
             onDeleteModule={delModule}
           />
         </div>
