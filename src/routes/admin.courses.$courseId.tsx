@@ -246,8 +246,8 @@ function CoverPreview({ coverUrl }: { coverUrl: string | null }) {
   );
 }
 
-function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteModule }: {
-  modules: any[]; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+function ModulesEditor({ modules, courseId, onChange, onUpdateModule, onDeleteModule }: {
+  modules: any[]; courseId: string; onChange: () => void; onUpdateModule: (id: string, patch: { title?: string; description?: string | null }) => void; onDeleteModule: (id: string) => void;
 }) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const ids = modules.map((m) => m.id);
@@ -275,7 +275,7 @@ function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteMo
               idx={idx}
               courseId={courseId}
               onChange={onChange}
-              onRenameModule={onRenameModule}
+              onUpdateModule={onUpdateModule}
               onDeleteModule={onDeleteModule}
             />
           ))}
@@ -285,8 +285,8 @@ function ModulesEditor({ modules, courseId, onChange, onRenameModule, onDeleteMo
   );
 }
 
-function SortableModule({ m, idx, courseId, onChange, onRenameModule, onDeleteModule }: {
-  m: any; idx: number; courseId: string; onChange: () => void; onRenameModule: (id: string, title: string) => void; onDeleteModule: (id: string) => void;
+function SortableModule({ m, idx, courseId, onChange, onUpdateModule, onDeleteModule }: {
+  m: any; idx: number; courseId: string; onChange: () => void; onUpdateModule: (id: string, patch: { title?: string; description?: string | null }) => void; onDeleteModule: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: m.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
@@ -306,13 +306,12 @@ function SortableModule({ m, idx, courseId, onChange, onRenameModule, onDeleteMo
               <GripVertical className="h-4 w-4" />
             </button>
             <div className="grid h-8 w-8 place-items-center rounded bg-primary/10 font-display text-sm font-bold text-primary">{idx + 1}</div>
-            <Input
-              defaultValue={m.title}
-              onClick={(e) => e.stopPropagation()}
-              onBlur={(e) => e.target.value !== m.title && onRenameModule(m.id, e.target.value)}
-              className="h-8 flex-1 max-w-md border-none bg-transparent font-display font-semibold shadow-none focus-visible:ring-1"
-            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate font-display text-sm font-semibold">{m.title}</span>
+              {m.description && <span className="truncate text-xs text-muted-foreground">{m.description}</span>}
+            </div>
             <Badge variant="outline">{m.lessons.length} dars</Badge>
+            <EditModuleDialog m={m} onSaved={(p) => onUpdateModule(m.id, p)} />
             <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); onDeleteModule(m.id); }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         </AccordionTrigger>
