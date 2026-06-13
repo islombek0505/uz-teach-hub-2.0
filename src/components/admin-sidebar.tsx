@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   Bell,
+  BarChart3,
   Newspaper,
   User,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const items = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Kurslar", url: "/admin/courses", icon: BookOpen },
   { title: "O'quvchilar", url: "/admin/students", icon: Users },
+  { title: "O'quvchilar statistikasi", url: "/admin/student-stats", icon: BarChart3 },
   { title: "Mentorlar", url: "/admin/mentors", icon: UserCheck },
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
   { title: "Bildirishnomalar", url: "/admin/notifications", icon: Bell },
