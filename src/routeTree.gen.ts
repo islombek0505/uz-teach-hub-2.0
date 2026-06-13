@@ -23,6 +23,7 @@ import { Route as AppNotificationsRouteImport } from './routes/app.notifications
 import { Route as AppMentorRouteImport } from './routes/app.mentor'
 import { Route as AppFeedbackRouteImport } from './routes/app.feedback'
 import { Route as AdminStudentsRouteImport } from './routes/admin.students'
+import { Route as AdminStudentStatsRouteImport } from './routes/admin.student-stats'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
@@ -33,6 +34,7 @@ import { Route as AdminFeedbackRouteImport } from './routes/admin.feedback'
 import { Route as AppCoursesIndexRouteImport } from './routes/app.courses.index'
 import { Route as AdminCoursesIndexRouteImport } from './routes/admin.courses.index'
 import { Route as AppCoursesCourseIdRouteImport } from './routes/app.courses.$courseId'
+import { Route as AdminStudentStatsStudentIdRouteImport } from './routes/admin.student-stats.$studentId'
 import { Route as AdminCoursesNewRouteImport } from './routes/admin.courses.new'
 import { Route as AdminCoursesCourseIdRouteImport } from './routes/admin.courses.$courseId'
 import { Route as AppCoursesCourseIdIndexRouteImport } from './routes/app.courses.$courseId.index'
@@ -108,6 +110,11 @@ const AdminStudentsRoute = AdminStudentsRouteImport.update({
   path: '/students',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStudentStatsRoute = AdminStudentStatsRouteImport.update({
+  id: '/student-stats',
+  path: '/student-stats',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -158,6 +165,12 @@ const AppCoursesCourseIdRoute = AppCoursesCourseIdRouteImport.update({
   path: '/courses/$courseId',
   getParentRoute: () => AppRoute,
 } as any)
+const AdminStudentStatsStudentIdRoute =
+  AdminStudentStatsStudentIdRouteImport.update({
+    id: '/$studentId',
+    path: '/$studentId',
+    getParentRoute: () => AdminStudentStatsRoute,
+  } as any)
 const AdminCoursesNewRoute = AdminCoursesNewRouteImport.update({
   id: '/courses/new',
   path: '/courses/new',
@@ -192,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
@@ -204,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/admin/student-stats/$studentId': typeof AdminStudentStatsStudentIdRoute
   '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/app/courses/': typeof AppCoursesIndexRoute
@@ -220,6 +235,7 @@ export interface FileRoutesByTo {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
@@ -232,6 +248,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/admin/student-stats/$studentId': typeof AdminStudentStatsStudentIdRoute
   '/admin/courses': typeof AdminCoursesIndexRoute
   '/app/courses': typeof AppCoursesIndexRoute
   '/app/courses/$courseId': typeof AppCoursesCourseIdIndexRoute
@@ -250,6 +267,7 @@ export interface FileRoutesById {
   '/admin/payments': typeof AdminPaymentsRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
   '/admin/students': typeof AdminStudentsRoute
   '/app/feedback': typeof AppFeedbackRoute
   '/app/mentor': typeof AppMentorRoute
@@ -262,6 +280,7 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/admin/courses/$courseId': typeof AdminCoursesCourseIdRoute
   '/admin/courses/new': typeof AdminCoursesNewRoute
+  '/admin/student-stats/$studentId': typeof AdminStudentStatsStudentIdRoute
   '/app/courses/$courseId': typeof AppCoursesCourseIdRouteWithChildren
   '/admin/courses/': typeof AdminCoursesIndexRoute
   '/app/courses/': typeof AppCoursesIndexRoute
@@ -282,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/profile'
     | '/admin/settings'
+    | '/admin/student-stats'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
@@ -294,6 +314,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
+    | '/admin/student-stats/$studentId'
     | '/app/courses/$courseId'
     | '/admin/courses/'
     | '/app/courses/'
@@ -310,6 +331,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/profile'
     | '/admin/settings'
+    | '/admin/student-stats'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
@@ -322,6 +344,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
+    | '/admin/student-stats/$studentId'
     | '/admin/courses'
     | '/app/courses'
     | '/app/courses/$courseId'
@@ -339,6 +362,7 @@ export interface FileRouteTypes {
     | '/admin/payments'
     | '/admin/profile'
     | '/admin/settings'
+    | '/admin/student-stats'
     | '/admin/students'
     | '/app/feedback'
     | '/app/mentor'
@@ -351,6 +375,7 @@ export interface FileRouteTypes {
     | '/app/'
     | '/admin/courses/$courseId'
     | '/admin/courses/new'
+    | '/admin/student-stats/$studentId'
     | '/app/courses/$courseId'
     | '/admin/courses/'
     | '/app/courses/'
@@ -465,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStudentsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/student-stats': {
+      id: '/admin/student-stats'
+      path: '/student-stats'
+      fullPath: '/admin/student-stats'
+      preLoaderRoute: typeof AdminStudentStatsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -535,6 +567,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCoursesCourseIdRouteImport
       parentRoute: typeof AppRoute
     }
+    '/admin/student-stats/$studentId': {
+      id: '/admin/student-stats/$studentId'
+      path: '/$studentId'
+      fullPath: '/admin/student-stats/$studentId'
+      preLoaderRoute: typeof AdminStudentStatsStudentIdRouteImport
+      parentRoute: typeof AdminStudentStatsRoute
+    }
     '/admin/courses/new': {
       id: '/admin/courses/new'
       path: '/courses/new'
@@ -566,6 +605,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminStudentStatsRouteChildren {
+  AdminStudentStatsStudentIdRoute: typeof AdminStudentStatsStudentIdRoute
+}
+
+const AdminStudentStatsRouteChildren: AdminStudentStatsRouteChildren = {
+  AdminStudentStatsStudentIdRoute: AdminStudentStatsStudentIdRoute,
+}
+
+const AdminStudentStatsRouteWithChildren =
+  AdminStudentStatsRoute._addFileChildren(AdminStudentStatsRouteChildren)
+
 interface AdminRouteChildren {
   AdminFeedbackRoute: typeof AdminFeedbackRoute
   AdminMentorsRoute: typeof AdminMentorsRoute
@@ -574,6 +624,7 @@ interface AdminRouteChildren {
   AdminPaymentsRoute: typeof AdminPaymentsRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStudentStatsRoute: typeof AdminStudentStatsRouteWithChildren
   AdminStudentsRoute: typeof AdminStudentsRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCoursesCourseIdRoute: typeof AdminCoursesCourseIdRoute
@@ -589,6 +640,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPaymentsRoute: AdminPaymentsRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminStudentStatsRoute: AdminStudentStatsRouteWithChildren,
   AdminStudentsRoute: AdminStudentsRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminCoursesCourseIdRoute: AdminCoursesCourseIdRoute,
