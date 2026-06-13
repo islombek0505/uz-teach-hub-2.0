@@ -177,6 +177,19 @@ function LessonPlayer() {
                   {!lesson.has_quiz && !lessonDone && (
                     <Button onClick={markCompleted} className="mt-2"><CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash</Button>
                   )}
+                  {Array.isArray(lesson.presentation_slides) && lesson.presentation_slides.length > 0 && (
+                    <div className="not-prose mt-6 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Presentation className="h-5 w-5 text-primary" />
+                        <h3 className="font-display text-lg font-semibold">Dars prezentatsiyasi</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Slaydlarni keyingi/oldingi tugmalari bilan ko'rib chiqing. Yuklab olish imkoni yo'q.</p>
+                      <PresentationSlidesViewer
+                        slides={lesson.presentation_slides as string[]}
+                        title={lesson.title}
+                      />
+                    </div>
+                  )}
                 </CardContent></Card>
               </TabsContent>
 
@@ -267,20 +280,6 @@ function LessonPlayer() {
                 </TabsContent>
               )}
             </Tabs>
-
-            {Array.isArray(lesson.presentation_slides) && lesson.presentation_slides.length > 0 && (
-              <section className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Presentation className="h-5 w-5 text-primary" />
-                  <h2 className="font-display text-lg font-semibold">Dars prezentatsiyasi</h2>
-                </div>
-                <p className="text-sm text-muted-foreground">Slaydlarni keyingi/oldingi tugmalari bilan ko'rib chiqing. Yuklab olish imkoni yo'q.</p>
-                <PresentationSlidesViewer
-                  slides={lesson.presentation_slides as string[]}
-                  title={lesson.title}
-                />
-              </section>
-            )}
 
             <div className="flex items-center justify-between border-t pt-4">
               <Button variant="outline" disabled={!prev} onClick={() => prev && navigate({ to: "/app/courses/$courseId/lessons/$lessonId", params: { courseId, lessonId: prev.id } })}>
