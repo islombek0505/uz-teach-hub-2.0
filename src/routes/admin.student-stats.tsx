@@ -24,7 +24,7 @@ function AdminStudentStats() {
   const fetchStats = useServerFn(getStudentsStats);
   const { data: students = [], isLoading } = useQuery({
     queryKey: ["admin", "student-stats"],
-    queryFn: () => fetchStats({}),
+    queryFn: () => fetchStats(),
   });
 
   const [search, setSearch] = useState("");
