@@ -18,18 +18,18 @@ function AdminDashboard() {
     queryKey: ["admin", "dashboard"],
     queryFn: async () => {
       const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      const [studentsRes, subsRes, coursesRes, lessonsRes, payRes, pendingRes] = await Promise.all([
+      const [studentsRes, plansRes, coursesRes, lessonsRes, payRes, pendingRes] = await Promise.all([
         supabase.from("user_roles").select("user_id", { count: "exact", head: true }).eq("role", "student"),
-        supabase.from("subscriptions").select("id", { count: "exact", head: true }).eq("active", true),
+        supabase.from("user_plan").select("user_id", { count: "exact", head: true }).gt("expires_at", new Date().toISOString()),
         supabase.from("courses").select("id", { count: "exact", head: true }),
         supabase.from("lessons").select("id", { count: "exact", head: true }),
         supabase.from("payments").select("amount").eq("status", "approved").gte("created_at", monthStart.toISOString()),
-        supabase.from("payments").select("id, amount, payer_name, user_id, courses(title)").eq("status", "pending").order("created_at", { ascending: false }).limit(5),
+        supabase.from("payments").select("id, amount, payer_name, user_id, plans(title)").eq("status", "pending").order("created_at", { ascending: false }).limit(5),
       ]);
       const revenue = (payRes.data ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
       return {
         students: studentsRes.count ?? 0,
-        active: subsRes.count ?? 0,
+        active: plansRes.count ?? 0,
         courses: coursesRes.count ?? 0,
         lessons: lessonsRes.count ?? 0,
         revenue,
@@ -75,7 +75,7 @@ function AdminDashboard() {
               <div key={p.id} className="flex items-center gap-3 rounded-lg border p-3">
                 <AlertCircle className="h-4 w-4 text-warning" />
                 <div className="flex-1 min-w-0">
-                  <div className="truncate text-sm font-medium">{p.payer_name ?? "—"} — {p.courses?.title ?? "—"}</div>
+                  <div className="truncate text-sm font-medium">{p.payer_name ?? "—"} — {p.plans?.title ?? "—"}</div>
                   <div className="text-xs text-muted-foreground">{fmt(Number(p.amount))}</div>
                 </div>
               </div>
