@@ -98,9 +98,6 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
-          price: number
-          price_mentor: number
-          price_self: number
           published: boolean
           title: string
           updated_at: string
@@ -111,9 +108,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          price?: number
-          price_mentor?: number
-          price_self?: number
           published?: boolean
           title: string
           updated_at?: string
@@ -124,9 +118,6 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
-          price?: number
-          price_mentor?: number
-          price_self?: number
           published?: boolean
           title?: string
           updated_at?: string
@@ -327,35 +318,6 @@ export type Database = {
           },
         ]
       }
-      mentor_courses: {
-        Row: {
-          course_id: string
-          created_at: string
-          id: string
-          mentor_id: string
-        }
-        Insert: {
-          course_id: string
-          created_at?: string
-          id?: string
-          mentor_id: string
-        }
-        Update: {
-          course_id?: string
-          created_at?: string
-          id?: string
-          mentor_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "mentor_courses_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       modules: {
         Row: {
           course_id: string
@@ -532,51 +494,51 @@ export type Database = {
         Row: {
           admin_note: string | null
           amount: number
-          course_id: string
+          course_id: string | null
           created_at: string
           id: string
           note: string | null
           payer_name: string | null
           payer_phone: string | null
+          plan_id: string | null
           receipt_url: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["payment_status"]
-          tariff: Database["public"]["Enums"]["course_tariff"]
           updated_at: string
           user_id: string
         }
         Insert: {
           admin_note?: string | null
           amount: number
-          course_id: string
+          course_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          plan_id?: string | null
           receipt_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
-          tariff?: Database["public"]["Enums"]["course_tariff"]
           updated_at?: string
           user_id: string
         }
         Update: {
           admin_note?: string | null
           amount?: number
-          course_id?: string
+          course_id?: string | null
           created_at?: string
           id?: string
           note?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          plan_id?: string | null
           receipt_url?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
-          tariff?: Database["public"]["Enums"]["course_tariff"]
           updated_at?: string
           user_id?: string
         }
@@ -588,7 +550,53 @@ export type Database = {
             referencedRelation: "courses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      plans: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          price: number
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          duration_days: number
+          id?: string
+          is_active?: boolean
+          price?: number
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          price?: number
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_settings: {
         Row: {
@@ -624,6 +632,7 @@ export type Database = {
           instagram_url: string | null
           phone: string | null
           telegram_url: string | null
+          trial_activated_at: string | null
           updated_at: string
         }
         Insert: {
@@ -641,6 +650,7 @@ export type Database = {
           instagram_url?: string | null
           phone?: string | null
           telegram_url?: string | null
+          trial_activated_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -658,6 +668,7 @@ export type Database = {
           instagram_url?: string | null
           phone?: string | null
           telegram_url?: string | null
+          trial_activated_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -738,53 +749,50 @@ export type Database = {
           },
         ]
       }
-      subscriptions: {
+      user_plan: {
         Row: {
-          active: boolean
-          course_id: string
           created_at: string
-          expires_at: string | null
-          id: string
-          mentor_id: string | null
+          expires_at: string
+          is_trial: boolean
           payment_id: string | null
-          tariff: Database["public"]["Enums"]["course_tariff"]
+          plan_id: string | null
+          started_at: string
+          updated_at: string
           user_id: string
         }
         Insert: {
-          active?: boolean
-          course_id: string
           created_at?: string
-          expires_at?: string | null
-          id?: string
-          mentor_id?: string | null
+          expires_at: string
+          is_trial?: boolean
           payment_id?: string | null
-          tariff?: Database["public"]["Enums"]["course_tariff"]
+          plan_id?: string | null
+          started_at?: string
+          updated_at?: string
           user_id: string
         }
         Update: {
-          active?: boolean
-          course_id?: string
           created_at?: string
-          expires_at?: string | null
-          id?: string
-          mentor_id?: string | null
+          expires_at?: string
+          is_trial?: boolean
           payment_id?: string | null
-          tariff?: Database["public"]["Enums"]["course_tariff"]
+          plan_id?: string | null
+          started_at?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "subscriptions_course_id_fkey"
-            columns: ["course_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "subscriptions_payment_id_fkey"
+            foreignKeyName: "user_plan_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: false
             referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_plan_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
@@ -815,6 +823,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_active_plan: { Args: { _user_id: string }; Returns: boolean }
       has_course_access: {
         Args: { _course_id: string; _user_id: string }
         Returns: boolean
@@ -829,7 +838,6 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "student" | "mentor"
-      course_tariff: "mentor" | "self"
       feedback_type: "suggestion" | "feedback" | "complaint" | "question"
       lesson_type: "video" | "presentation" | "text"
       payment_status: "pending" | "approved" | "rejected"
@@ -961,7 +969,6 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "student", "mentor"],
-      course_tariff: ["mentor", "self"],
       feedback_type: ["suggestion", "feedback", "complaint", "question"],
       lesson_type: ["video", "presentation", "text"],
       payment_status: ["pending", "approved", "rejected"],
