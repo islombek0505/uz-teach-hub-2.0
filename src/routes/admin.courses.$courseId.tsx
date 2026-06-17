@@ -116,8 +116,6 @@ function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSave
     title: course.title ?? "",
     description: course.description ?? "",
     category: course.category ?? "",
-    price_self: Number(course.price_self ?? course.price ?? 0),
-    price_mentor: Number(course.price_mentor ?? course.price ?? 0),
     published: !!course.published,
   });
 
@@ -126,8 +124,6 @@ function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSave
       title: course.title ?? "",
       description: course.description ?? "",
       category: course.category ?? "",
-      price_self: Number(course.price_self ?? course.price ?? 0),
-      price_mentor: Number(course.price_mentor ?? course.price ?? 0),
       published: !!course.published,
     });
   }, [course.id, course.updated_at]);
@@ -138,9 +134,6 @@ function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSave
       title: form.title,
       description: form.description || null,
       category: form.category || null,
-      price_self: form.price_self,
-      price: form.price_self,
-      price_mentor: form.price_mentor,
       published: form.published,
     }).eq("id", course.id);
     setBusy(false);
@@ -177,14 +170,6 @@ function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSave
                 <div className="text-xs uppercase text-muted-foreground">Kategoriya</div>
                 <div className="text-sm">{course.category || "—"}</div>
               </div>
-              <div>
-                <div className="text-xs uppercase text-muted-foreground">Erkin narx</div>
-                <div className="text-sm">{Number(course.price_self ?? course.price ?? 0).toLocaleString()} so'm</div>
-              </div>
-              <div>
-                <div className="text-xs uppercase text-muted-foreground">Mentor narx</div>
-                <div className="text-sm">{Number(course.price_mentor ?? course.price ?? 0).toLocaleString()} so'm</div>
-              </div>
             </div>
             <div>
               <Badge variant={course.published ? "default" : "secondary"}>{course.published ? "Nashr etilgan" : "Qoralama"}</Badge>
@@ -209,8 +194,6 @@ function CourseSettingsCard({ course, onSaved, onDelete }: { course: any; onSave
         <div className="space-y-2 sm:col-span-2"><Label>Nomi</Label><Input value={form.title} onChange={(e) => setForm((s) => ({ ...s, title: e.target.value }))} /></div>
         <div className="space-y-2 sm:col-span-2"><Label>Tavsif</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))} /></div>
         <div className="space-y-2"><Label>Kategoriya</Label><Input value={form.category} onChange={(e) => setForm((s) => ({ ...s, category: e.target.value }))} /></div>
-        <div className="space-y-2"><Label>Erkin o'rganish narxi (so'm)</Label><Input type="number" value={form.price_self} onChange={(e) => setForm((s) => ({ ...s, price_self: Number(e.target.value) }))} /></div>
-        <div className="space-y-2"><Label>Mentor yordami narxi (so'm)</Label><Input type="number" value={form.price_mentor} onChange={(e) => setForm((s) => ({ ...s, price_mentor: Number(e.target.value) }))} /></div>
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <div className="text-sm font-medium">Nashr etilgan</div>
