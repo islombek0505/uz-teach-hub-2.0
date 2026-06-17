@@ -27,11 +27,11 @@ export const getStudentsStats = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const [{ data: roles }, { data: profiles }, { data: progress }, { data: subs }, { data: lessons }] = await Promise.all([
+    const [{ data: roles }, { data: profiles }, { data: progress }, { data: plans }, { data: lessons }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("user_id, role").eq("role", "student"),
       supabaseAdmin.from("profiles").select("id, full_name, phone, avatar_url, created_at, email"),
       supabaseAdmin.from("lesson_progress").select("user_id, lesson_id, completed"),
-      supabaseAdmin.from("subscriptions").select("user_id, course_id, active, expires_at, courses(id, title)"),
+      supabaseAdmin.from("user_plan").select("user_id, expires_at, is_trial, plans(id, title)"),
       supabaseAdmin.from("lessons").select("id, type"),
     ]);
 
@@ -65,13 +65,12 @@ export const getStudentsStats = createServerFn({ method: "GET" })
     // active subs
     const coursesByUser = new Map<string, { id: string; title: string }[]>();
     const now = Date.now();
-    for (const s of subs ?? []) {
-      if (!s.active) continue;
+    for (const s of (plans as any[]) ?? []) {
       if (s.expires_at && new Date(s.expires_at).getTime() < now) continue;
-      const course = (s as any).courses;
-      if (!course) continue;
+      const plan = s.plans;
+      if (!plan) continue;
       const arr = coursesByUser.get(s.user_id) ?? [];
-      if (!arr.find((c) => c.id === course.id)) arr.push({ id: course.id, title: course.title });
+      if (!arr.find((c) => c.id === plan.id)) arr.push({ id: plan.id, title: plan.title });
       coursesByUser.set(s.user_id, arr);
     }
 
@@ -147,10 +146,10 @@ export const getStudentDetail = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sid = data.studentId;
 
-    const [{ data: profile }, { data: progress }, { data: subs }, { data: attempts }] = await Promise.all([
+    const [{ data: profile }, { data: progress }, { data: userPlan }, { data: attempts }] = await Promise.all([
       supabaseAdmin.from("profiles").select("*").eq("id", sid).maybeSingle(),
       supabaseAdmin.from("lesson_progress").select("lesson_id, completed, course_id").eq("user_id", sid),
-      supabaseAdmin.from("subscriptions").select("course_id, active, expires_at").eq("user_id", sid),
+      supabaseAdmin.from("user_plan").select("expires_at, is_trial").eq("user_id", sid).maybeSingle(),
       supabaseAdmin.from("quiz_attempts").select("id").eq("user_id", sid),
     ]);
     if (!profile) throw new Error("Student topilmadi");
@@ -159,12 +158,8 @@ export const getStudentDetail = createServerFn({ method: "GET" })
     const lastSignIn = au?.user?.last_sign_in_at ?? null;
 
     const now = Date.now();
-    const activeCourseIds = new Set(
-      (subs ?? [])
-        .filter((s: any) => s.active && (!s.expires_at || new Date(s.expires_at).getTime() > now))
-        .map((s: any) => s.course_id),
-    );
-    // Include any course they have progress in even if not currently active
+    const activeCourseIds = new Set<string>();
+    const hasActivePlan = !!(userPlan as any) && (!(userPlan as any).expires_at || new Date((userPlan as any).expires_at).getTime() > now);
     for (const p of progress ?? []) activeCourseIds.add(p.course_id);
 
     const completedLessons = new Set((progress ?? []).filter((p: any) => p.completed).map((p: any) => p.lesson_id));
@@ -230,7 +225,7 @@ export const getStudentDetail = createServerFn({ method: "GET" })
       totals: {
         videos_watched: videosWatched,
         lessons_completed: lessonsCompleted,
-        active_courses: Array.from(activeCourseIds).length,
+        active_courses: hasActivePlan ? Array.from(activeCourseIds).length : 0,
         quiz_attempts: (attempts ?? []).length,
       },
       courses,
