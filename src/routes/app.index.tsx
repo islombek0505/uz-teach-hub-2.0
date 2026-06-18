@@ -25,26 +25,32 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const [{ data: prof }, { data: subsData }, { data: prog }, { data: attempts }] = await Promise.all([
+      const [{ data: prof }, { data: planRow }, { data: prog }, { data: attempts }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("subscriptions").select("*, course:courses(*)").eq("user_id", user.id).eq("active", true),
+        supabase.from("user_plan").select("expires_at, is_trial, plans(title, duration_days)").eq("user_id", user.id).maybeSingle(),
         supabase.from("lesson_progress").select("*").eq("user_id", user.id).eq("completed", true),
         supabase.from("quiz_attempts").select("score").eq("user_id", user.id),
       ]);
       setProfile(prof);
-      setSubs(subsData ?? []);
+      const active = planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date());
+      setSubs(active ? [planRow] : []);
       setProgress(prog ?? []);
-      const courseIds = (subsData ?? []).map((s: any) => s.course_id);
-      if (courseIds.length) {
-        const { data: cs } = await supabase.from("courses").select("*, modules(*, lessons(id))").in("id", courseIds);
-        const list = cs ?? [];
-        await Promise.all(list.map(async (c: any) => {
-          if (c.cover_url && !c.cover_url.startsWith("http")) {
-            const { data: s } = await supabase.storage.from("course-covers").createSignedUrl(c.cover_url, 60 * 60);
-            c.cover_url = s?.signedUrl ?? null;
-          }
-        }));
-        setCourses(list);
+      // With unified tariff, show recently progressed courses
+      const recentLessonIds = (prog ?? []).slice(0, 50).map((p: any) => p.lesson_id);
+      if (recentLessonIds.length) {
+        const { data: ls } = await supabase.from("lessons").select("module_id, modules(course_id)").in("id", recentLessonIds);
+        const cIds = Array.from(new Set(((ls ?? []) as any[]).map((l: any) => l.modules?.course_id).filter(Boolean)));
+        if (cIds.length) {
+          const { data: cs } = await supabase.from("courses").select("*, modules(*, lessons(id))").in("id", cIds);
+          const list = cs ?? [];
+          await Promise.all(list.map(async (c: any) => {
+            if (c.cover_url && !c.cover_url.startsWith("http")) {
+              const { data: s } = await supabase.storage.from("course-covers").createSignedUrl(c.cover_url, 60 * 60);
+              c.cover_url = s?.signedUrl ?? null;
+            }
+          }));
+          setCourses(list);
+        }
       }
       if (attempts && attempts.length) {
         setAvgScore(Math.round(attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / attempts.length));
@@ -56,8 +62,8 @@ function Dashboard() {
   const activeSub = subs[0];
   const stats = [
     { label: "Tugatilgan darslar", value: String(progress.length), icon: PlayCircle, color: "text-primary bg-primary/10" },
-    { label: "Faol kurslar", value: String(subs.length), icon: BookOpen, color: "text-accent-foreground bg-accent/40" },
-    { label: "Obunalar", value: String(subs.length), icon: Clock, color: "text-warning bg-warning/15" },
+    { label: "Faol kurslar", value: String(courses.length), icon: BookOpen, color: "text-accent-foreground bg-accent/40" },
+    { label: "Tarif", value: activeSub ? (activeSub.is_trial ? "Sinov" : (activeSub.plans?.title ?? "Faol")) : "Yo'q", icon: Clock, color: "text-warning bg-warning/15" },
     { label: "O'rtacha ball", value: avgScore !== null ? `${avgScore}%` : "—", icon: Trophy, color: "text-success bg-success/15" },
   ];
 
@@ -73,7 +79,7 @@ function Dashboard() {
               {activeSub && (
                 <div className="mt-4 flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4" />
-                  <span className="text-white/80">Obuna faol — {activeSub.expires_at ? new Date(activeSub.expires_at).toLocaleDateString() : "muddatsiz"}</span>
+                  <span className="text-white/80">Tarif faol — {activeSub.expires_at ? new Date(activeSub.expires_at).toLocaleDateString() : "muddatsiz"}</span>
                 </div>
               )}
             </div>
@@ -144,14 +150,14 @@ function Dashboard() {
 
         {activeSub && (
           <Card>
-            <CardHeader><CardTitle className="font-display">Obuna ma'lumotlari</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="font-display">Tarif ma'lumotlari</CardTitle></CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Faol kurslar</div>
-                <div className="mt-1 font-display text-lg font-semibold">{subs.length} ta</div>
+                <div className="text-xs uppercase text-muted-foreground">Tarif</div>
+                <div className="mt-1 font-display text-lg font-semibold">{activeSub.is_trial ? "Sinov muddati" : (activeSub.plans?.title ?? "Faol")}</div>
               </div>
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Eng yaqin tugash</div>
+                <div className="text-xs uppercase text-muted-foreground">Tugash sanasi</div>
                 <div className="mt-1 font-display text-lg font-semibold text-success">{activeSub.expires_at ? new Date(activeSub.expires_at).toLocaleDateString() : "Muddatsiz"}</div>
               </div>
               <div className="sm:col-span-2 flex items-center justify-end">
