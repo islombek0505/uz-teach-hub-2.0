@@ -21,20 +21,23 @@ function LoginPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const email = phoneToEmail(phone);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.user) {
+    try {
+      const email = phoneToEmail(phone);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) {
+        toast.error("Telefon yoki parol noto'g'ri");
+        return;
+      }
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id);
+      const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+      toast.success("Tizimga kirildi!");
+      navigate({ to: isAdmin ? "/admin" : "/app" });
+    } finally {
       setLoading(false);
-      toast.error("Telefon yoki parol noto'g'ri");
-      return;
     }
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", data.user.id);
-    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-    toast.success("Tizimga kirildi!");
-    navigate({ to: isAdmin ? "/admin" : "/app" });
   };
 
   return (
@@ -53,7 +56,7 @@ function LoginPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Parol</Label>
-            <Link to="/auth/login" className="text-xs text-primary hover:underline">Parolni unutdingizmi?</Link>
+            <span className="text-xs text-muted-foreground">Parolni unutdingiz? Admin bilan bog'laning</span>
           </div>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

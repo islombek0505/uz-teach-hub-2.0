@@ -336,7 +336,7 @@ function SortableLessons({ lessons, onChange }: { lessons: any[]; onChange: () =
 }
 
 function LessonRow({ lesson, index, onChange }: { lesson: any; index: number; onChange: () => void }) {
-  const Icon = lesson.type === "presentation" ? FileText : lesson.type === "text" ? FileText : Video;
+  const Icon = lesson.type === "presentation" ? Presentation : lesson.type === "text" ? FileText : Video;
   const deleteVideo = useServerFn(deleteBunnyVideo);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lesson.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
@@ -672,7 +672,8 @@ function MaterialsManager({ lessonId }: { lessonId: string }) {
   const upload = async (file: File) => {
     setBusy(true);
     try {
-      const path = `${lessonId}/${Date.now()}-${file.name}`;
+      const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const path = `${lessonId}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("materials").upload(path, file, { contentType: file.type });
       if (upErr) throw upErr;
       const { error } = await supabase.from("lesson_materials").insert({

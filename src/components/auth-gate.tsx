@@ -21,7 +21,7 @@ export function AuthGate({ children, requireAdmin = false }: { children: ReactNo
     }
   }, [loading, session, role, requireAdmin, navigate]);
 
-  if (loading || !session || (requireAdmin && role !== "admin") || (!requireAdmin && role === "admin")) {
+  if (loading || !session || role === null || (requireAdmin && role !== "admin") || (!requireAdmin && role === "admin")) {
     return (
       <div className="grid min-h-screen place-items-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

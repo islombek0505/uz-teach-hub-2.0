@@ -1,0 +1,11 @@
+# TanStack Start (SSR) on Netlify via Nitro `netlify` preset.
+# Publish `dist` (not dist/client) — Nitro merges static assets + generates
+# `.netlify/functions-internal/` for SSR routing on deploy.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[dev]
+  command = "npm run dev"
+  port = 8080

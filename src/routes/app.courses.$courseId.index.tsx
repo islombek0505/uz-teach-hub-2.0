@@ -156,7 +156,7 @@ function CourseDetail() {
                       const locked = !enrolled;
                       const done = completedSet.has(l.id);
                       const expanded = expandedLessonId === l.id;
-                      const TypeIcon = l.type === "presentation" || l.type === "text" ? FileText : PlayCircle;
+                      const TypeIcon = l.type === "presentation" ? Presentation : l.type === "text" ? FileText : PlayCircle;
                       return (
                         <li key={l.id} className="border-b last:border-b-0">
                           <div className="flex items-center gap-4 py-4">

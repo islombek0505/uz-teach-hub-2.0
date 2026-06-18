@@ -40,6 +40,7 @@ function AdminFeedback() {
 
   const markRead = async (id: string) => {
     await supabase.from("feedback").update({ read: true }).eq("id", id);
+    load();
   };
 
   const sendReply = async (id: string) => {

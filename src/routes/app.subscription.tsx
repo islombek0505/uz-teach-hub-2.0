@@ -188,7 +188,8 @@ function PayDialog({ plan, userId, cards, onDone }: { plan: any; userId: string;
     try {
       let receipt_url: string | null = null;
       if (file) {
-        const path = `${userId}/${plan.id}/${Date.now()}-${file.name}`;
+        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+        const path = `${userId}/${plan.id}/${Date.now()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("receipts").upload(path, file, { upsert: false });
         if (upErr) throw upErr;
         receipt_url = path;

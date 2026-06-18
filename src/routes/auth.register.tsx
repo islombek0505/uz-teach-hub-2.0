@@ -27,6 +27,10 @@ function RegisterPage() {
 
   const sendSms = (e: React.FormEvent) => {
     e.preventDefault();
+    const digits = phone.replace(/\D+/g, "");
+    if (!digits.startsWith("998") || digits.length !== 12) {
+      return toast.error("+998 bilan boshlanadigan 12 raqamli telefon kiriting");
+    }
     // TODO(Eskiz): real SMS yuborish. Hozir har qanday 6 raqam qabul qilinadi.
     toast.success("SMS kod yuborildi (demo: istalgan 6 raqam)");
     setStep("otp");
@@ -40,26 +44,30 @@ function RegisterPage() {
   };
   const finish = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password.length < 8) return toast.error("Parol kamida 8 ta belgi bo'lsin");
     if (password !== confirm) return toast.error("Parollar mos kelmadi");
     setLoading(true);
-    const email = phoneToEmail(phone);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/app`,
-        data: { full_name: name, phone: phone.replace(/\D+/g, "") },
-      },
-    });
-    if (error) {
+    try {
+      const email = phoneToEmail(phone);
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/app`,
+          data: { full_name: name, phone: phone.replace(/\D+/g, "") },
+        },
+      });
+      if (error) {
+        toast.error(error.message.includes("registered") ? "Bu raqam allaqachon ro'yxatdan o'tgan" : error.message);
+        return;
+      }
+      // Auto sign-in (email confirm o'chirilgan)
+      await supabase.auth.signInWithPassword({ email, password });
+      toast.success("Ro'yxatdan o'tdingiz!");
+      navigate({ to: "/app" });
+    } finally {
       setLoading(false);
-      toast.error(error.message.includes("registered") ? "Bu raqam allaqachon ro'yxatdan o'tgan" : error.message);
-      return;
     }
-    // Auto sign-in (email confirm o'chirilgan)
-    await supabase.auth.signInWithPassword({ email, password });
-    toast.success("Ro'yxatdan o'tdingiz!");
-    navigate({ to: "/app" });
   };
 
   return (
