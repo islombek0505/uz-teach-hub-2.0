@@ -25,22 +25,13 @@ function AdminStudents() {
       const adminSet = new Set((roles ?? []).filter((r: any) => r.role === "admin").map((r: any) => r.user_id));
       const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
       if (!ids.length) return [];
-      const [{ data: profs }, { data: subs }] = await Promise.all([
+      const [{ data: profs }, { data: plans }] = await Promise.all([
         supabase.from("profiles").select("id, full_name, phone, avatar_url, created_at").in("id", ids),
-        supabase.from("subscriptions").select("user_id, active, expires_at, tariff, mentor_id, courses(title)").in("user_id", ids),
+        supabase.from("user_plan").select("user_id, expires_at, is_trial, plans(title)").in("user_id", ids),
       ]);
-      const mentorIds = Array.from(new Set((subs ?? []).map((s: any) => s.mentor_id).filter(Boolean)));
-      const { data: mentorProfs } = mentorIds.length
-        ? await supabase.from("profiles").select("id, full_name").in("id", mentorIds)
-        : { data: [] as any[] };
-      const mMap = new Map((mentorProfs ?? []).map((p: any) => [p.id, p.full_name]));
-      const sMap = new Map<string, any[]>();
-      for (const s of subs ?? []) {
-        const arr = sMap.get(s.user_id) ?? [];
-        arr.push({ ...s, mentor_name: s.mentor_id ? mMap.get(s.mentor_id) : null });
-        sMap.set(s.user_id, arr);
-      }
-      return (profs ?? []).map((p: any) => ({ ...p, subs: sMap.get(p.id) ?? [], is_admin: adminSet.has(p.id) }));
+      const pMap = new Map<string, any>();
+      for (const p of (plans ?? []) as any[]) pMap.set(p.user_id, p);
+      return (profs ?? []).map((p: any) => ({ ...p, plan: pMap.get(p.id) ?? null, is_admin: adminSet.has(p.id) }));
     },
   });
 
@@ -71,8 +62,8 @@ function AdminStudents() {
               <TableHeader>
                 <TableRow>
                   <TableHead>O'quvchi</TableHead>
-                  <TableHead>Faol kurslar</TableHead>
-                  <TableHead>Mentor</TableHead>
+                  <TableHead>Tarif</TableHead>
+                  <TableHead>Tugash</TableHead>
                   <TableHead>Ro'yxatdan</TableHead>
                   <TableHead>Holat</TableHead>
                 </TableRow>
@@ -80,9 +71,9 @@ function AdminStudents() {
               <TableBody>
                 {filtered.length === 0 && !isLoading && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Topilmadi</TableCell></TableRow>}
                 {filtered.map((s: any) => {
-                  const activeSubs = s.subs.filter((x: any) => x.active && (!x.expires_at || new Date(x.expires_at) > new Date()));
                   const initials = (s.full_name ?? "?").split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
-                  const mentors = Array.from(new Set(activeSubs.map((a: any) => a.mentor_name).filter(Boolean)));
+                  const active = s.plan && (!s.plan.expires_at || new Date(s.plan.expires_at) > new Date());
+                  const planLabel = s.plan?.is_trial ? "Sinov" : (s.plan?.plans?.title ?? "—");
                   return (
                     <TableRow key={s.id}>
                       <TableCell>
@@ -100,10 +91,10 @@ function AdminStudents() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{activeSubs.map((a: any) => a.courses?.title).filter(Boolean).join(", ") || <span className="text-muted-foreground">—</span>}</TableCell>
-                      <TableCell className="text-sm">{mentors.length ? mentors.join(", ") : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="text-sm">{active ? planLabel : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell className="text-sm">{s.plan?.expires_at ? new Date(s.plan.expires_at).toLocaleDateString("uz-UZ") : "—"}</TableCell>
                       <TableCell className="text-sm">{new Date(s.created_at).toLocaleDateString("uz-UZ")}</TableCell>
-                      <TableCell>{activeSubs.length > 0 ? <Badge className="bg-success text-success-foreground">Faol</Badge> : <Badge variant="outline">Obunasiz</Badge>}</TableCell>
+                      <TableCell>{active ? <Badge className="bg-success text-success-foreground">Faol</Badge> : <Badge variant="outline">Tarifsiz</Badge>}</TableCell>
                     </TableRow>
                   );
                 })}
