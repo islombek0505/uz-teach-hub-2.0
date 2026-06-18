@@ -25,6 +25,7 @@ import { Route as AdminStudentsRouteImport } from './routes/admin.students'
 import { Route as AdminStudentStatsRouteImport } from './routes/admin.student-stats'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminProfileRouteImport } from './routes/admin.profile'
+import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminPaymentsRouteImport } from './routes/admin.payments'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminNewsRouteImport } from './routes/admin.news'
@@ -118,6 +119,11 @@ const AdminProfileRoute = AdminProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPaymentsRoute = AdminPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
@@ -218,6 +225,7 @@ export interface FileRoutesByTo {
   '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
@@ -248,6 +256,7 @@ export interface FileRoutesById {
   '/admin/news': typeof AdminNewsRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payments': typeof AdminPaymentsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/profile': typeof AdminProfileRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/student-stats': typeof AdminStudentStatsRouteWithChildren
@@ -280,6 +289,7 @@ export interface FileRouteTypes {
     | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
+    | '/admin/plans'
     | '/admin/profile'
     | '/admin/settings'
     | '/admin/student-stats'
@@ -308,6 +318,7 @@ export interface FileRouteTypes {
     | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
+    | '/admin/plans'
     | '/admin/profile'
     | '/admin/settings'
     | '/admin/student-stats'
@@ -337,6 +348,7 @@ export interface FileRouteTypes {
     | '/admin/news'
     | '/admin/notifications'
     | '/admin/payments'
+    | '/admin/plans'
     | '/admin/profile'
     | '/admin/settings'
     | '/admin/student-stats'
@@ -480,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProfileRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/payments': {
       id: '/admin/payments'
       path: '/payments'
@@ -583,6 +602,7 @@ interface AdminRouteChildren {
   AdminNewsRoute: typeof AdminNewsRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPaymentsRoute: typeof AdminPaymentsRoute
+  AdminPlansRoute: typeof AdminPlansRoute
   AdminProfileRoute: typeof AdminProfileRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStudentStatsRoute: typeof AdminStudentStatsRouteWithChildren
@@ -598,6 +618,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminNewsRoute: AdminNewsRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPaymentsRoute: AdminPaymentsRoute,
+  AdminPlansRoute: AdminPlansRoute,
   AdminProfileRoute: AdminProfileRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStudentStatsRoute: AdminStudentStatsRouteWithChildren,

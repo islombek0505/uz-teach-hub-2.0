@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  UserCheck,
   CreditCard,
   MessageSquare,
   Settings,
@@ -13,6 +12,7 @@ import {
   BarChart3,
   Newspaper,
   User,
+  Crown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,7 +34,7 @@ const items = [
   { title: "Kurslar", url: "/admin/courses", icon: BookOpen },
   { title: "O'quvchilar", url: "/admin/students", icon: Users },
   { title: "O'quvchilar statistikasi", url: "/admin/student-stats", icon: BarChart3 },
-  { title: "Mentorlar", url: "/admin/mentors", icon: UserCheck },
+  { title: "Tariflar", url: "/admin/plans", icon: Crown },
   { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
   { title: "Bildirishnomalar", url: "/admin/notifications", icon: Bell },
   { title: "Yangiliklar", url: "/admin/news", icon: Newspaper },
