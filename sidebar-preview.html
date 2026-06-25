@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OnlineTalim — Sidebar preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --sidebar: oklch(0.22 0.06 245);
+        --sidebar-fg: oklch(0.92 0.015 230);
+        --sidebar-primary: oklch(0.7 0.12 195);
+        --sidebar-accent: oklch(0.28 0.07 245);
+        --sidebar-border: oklch(0.3 0.06 245);
+        --success: oklch(0.62 0.15 155);
+        --destructive: oklch(0.6 0.22 25);
+        --gradient-accent: linear-gradient(135deg, oklch(0.55 0.13 220), oklch(0.78 0.1 195));
+        --gradient-primary: linear-gradient(135deg, oklch(0.22 0.06 245), oklch(0.55 0.13 220));
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: "Figtree", system-ui, sans-serif; background:
+        radial-gradient(40rem 40rem at 0% 0%, oklch(0.78 0.1 195 / 0.16), transparent 55%),
+        oklch(0.985 0.005 240); min-height: 100vh; display:flex; gap:0; padding: 24px; }
+      .wrap { display: flex; gap: 28px; align-items: flex-start; margin: auto; }
+      .label { font-size: 12px; color: oklch(0.5 0.03 240); text-align:center; margin-bottom: 10px; font-weight:500; }
+
+      /* ---- Sidebar ---- */
+      .sb { width: 268px; border-radius: 18px; overflow: hidden; background: var(--sidebar); color: var(--sidebar-fg); display: flex; flex-direction: column; box-shadow: 0 24px 60px -24px oklch(0.2 0.06 245 / 0.6); min-height: 600px; }
+      .sb.mini { width: 76px; }
+      .sb.mini .lbl, .sb.mini .brandtext, .sb.mini .plan, .sb.mini .proftext, .sb.mini .count, .sb.mini .grouplabel { display: none !important; }
+      .sb.mini .item { justify-content: center; padding: 0; width: 44px; height: 44px; margin: 0 auto; }
+      .sb.mini .brand, .sb.mini .profile { justify-content: center; }
+
+      .head { position: relative; padding: 14px; border-bottom: 1px solid var(--sidebar-border); overflow: hidden; }
+      .head::before { content:""; position:absolute; inset:-40% 0 auto 0; height:160px; background: radial-gradient(60% 100% at 50% 0%, oklch(0.7 0.12 195 / 0.22), transparent 70%); }
+      .brand { position: relative; display: flex; align-items: center; gap: 10px; padding: 4px; }
+      .logowrap { position: relative; }
+      .logoglow { position: absolute; inset: -4px; border-radius: 16px; background: var(--gradient-accent); opacity: .6; filter: blur(8px); animation: pulse 2.6s ease-in-out infinite; }
+      @keyframes pulse { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:.85;transform:scale(1.06)} }
+      .logo { position: relative; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--gradient-accent); box-shadow: inset 0 0 0 1px oklch(1 0 0 / .2); }
+      .brandtext b { font-family: "Outfit"; font-size: 16px; font-weight: 700; display: block; }
+      .brandtext span { font-size: 11px; color: oklch(0.92 0.015 230 / .55); }
+
+      .grouplabel { font-size: 11px; text-transform: none; color: oklch(0.92 0.015 230 / .45); padding: 14px 16px 6px; font-weight: 600; }
+      .menu { padding: 0 10px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+      .item { position: relative; display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 12px; color: oklch(0.92 0.015 230 / .7); cursor: pointer; transition: all .2s; font-size: 14px; font-weight: 500; }
+      .item:hover { background: oklch(0.28 0.07 245 / .6); color: #fff; }
+      .item:hover .ic { transform: scale(1.1); }
+      .item.active { background: linear-gradient(90deg, oklch(0.7 0.12 195 / .22), oklch(0.7 0.12 195 / .04)); box-shadow: inset 0 0 0 1px oklch(0.7 0.12 195 / .25); color: #fff; }
+      .item.active .bar { opacity: 1; transform: translateY(-50%) scaleY(1); }
+      .item.active .ic { color: var(--sidebar-primary); filter: drop-shadow(0 0 6px oklch(0.7 0.12 195 / .6)); }
+      .bar { position: absolute; left: 0; top: 50%; width: 4px; height: 24px; border-radius: 0 99px 99px 0; background: var(--sidebar-primary); opacity: 0; transform: translateY(-50%) scaleY(0); transition: all .3s; }
+      .ic { width: 18px; height: 18px; flex-shrink: 0; transition: transform .2s; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .count { margin-left: auto; height: 20px; min-width: 20px; padding: 0 6px; border-radius: 99px; background: var(--destructive); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; }
+
+      .foot { padding: 10px; border-top: 1px solid var(--sidebar-border); display: flex; flex-direction: column; gap: 8px; }
+      .plan { position: relative; overflow: hidden; border-radius: 12px; padding: 12px; color: #fff; background: var(--gradient-primary); box-shadow: inset 0 0 0 1px oklch(1 0 0 / .1); cursor: pointer; }
+      .plan .pglow { position:absolute; right:-24px; top:-24px; width:64px; height:64px; border-radius:50%; background: oklch(1 0 0 / .1); filter: blur(16px); }
+      .plan .row { position: relative; display: flex; align-items: center; gap: 10px; }
+      .plan .pic { width: 32px; height: 32px; border-radius: 9px; background: oklch(1 0 0 / .15); display: grid; place-items: center; box-shadow: inset 0 0 0 1px oklch(1 0 0 / .15); flex-shrink:0; }
+      .plan .pt { font-size: 14px; font-weight: 600; }
+      .plan .ps { font-size: 11px; color: oklch(1 0 0 / .7); }
+      .profile { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 12px; cursor: pointer; transition: background .2s; }
+      .profile:hover { background: oklch(0.28 0.07 245 / .6); }
+      .av { position: relative; width: 32px; height: 32px; border-radius: 50%; background: var(--sidebar-primary); display: grid; place-items: center; color: oklch(0.15 0.05 245); font-weight: 600; font-size: 12px; flex-shrink:0; }
+      .av .on { position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--sidebar); }
+      .proftext b { font-size: 14px; font-weight: 500; display:block; }
+      .proftext span { font-size: 11px; color: oklch(0.92 0.015 230 / .55); }
+      .logout { display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px; border-radius: 12px; color: oklch(0.92 0.015 230 / .7); cursor: pointer; font-size: 14px; font-weight: 500; transition: all .2s; }
+      .logout:hover { background: oklch(0.6 0.22 25 / .15); color: oklch(0.7 0.2 25); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div>
+        <div class="label">Yangi sidebar — ochiq holat</div>
+        <div class="sb">
+          <div class="head">
+            <div class="brand">
+              <div class="logowrap"><div class="logoglow"></div><div class="logo">
+                <svg class="ic" style="width:20px;height:20px;color:#fff"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+              </div></div>
+              <div class="brandtext"><b>OnlineTalim</b><span>O'quvchi paneli</span></div>
+            </div>
+          </div>
+          <div class="grouplabel">Menyu</div>
+          <div class="menu">
+            <div class="item active"><span class="bar"></span><svg class="ic"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="lbl">Bosh sahifa</span></div>
+            <div class="item"><span class="bar"></span><svg class="ic"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span class="lbl">Kurslarim</span></div>
+            <div class="item"><span class="bar"></span><svg class="ic"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="lbl">Bildirishnomalar</span><span class="count">3</span></div>
+            <div class="item"><span class="bar"></span><svg class="ic"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span class="lbl">Tarif va to'lov</span></div>
+            <div class="item"><span class="bar"></span><svg class="ic"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="lbl">Takliflar</span></div>
+            <div class="item"><span class="bar"></span><svg class="ic"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="lbl">Profil</span></div>
+          </div>
+          <div class="foot">
+            <div class="plan">
+              <div class="pglow"></div>
+              <div class="row">
+                <div class="pic"><svg class="ic" style="width:16px;height:16px"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7z"/></svg></div>
+                <div style="flex:1;min-width:0"><div class="pt">Faol tarif</div><div class="ps">Tugaydi: 20.07.2026</div></div>
+                <svg class="ic" style="width:16px;height:16px;color:oklch(1 0 0 / .6)"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+            <div class="profile">
+              <div class="av">IS<span class="on"></span></div>
+              <div class="proftext"><b>Islombek</b><span>O'quvchi</span></div>
+            </div>
+            <div class="logout"><svg class="ic"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Chiqish</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="label">Yig'ilgan (collapsed) holat</div>
+        <div class="sb mini">
+          <div class="head">
+            <div class="brand"><div class="logowrap"><div class="logoglow"></div><div class="logo"><svg class="ic" style="width:20px;height:20px;color:#fff"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div></div></div>
+          </div>
+          <div class="menu" style="margin-top:14px">
+            <div class="item active"><span class="bar"></span><svg class="ic"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></div>
+            <div class="item"><svg class="ic"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
+            <div class="item" style="position:relative"><svg class="ic"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span style="position:absolute;right:8px;top:8px;width:9px;height:9px;border-radius:50%;background:var(--destructive);box-shadow:0 0 0 2px var(--sidebar)"></span></div>
+            <div class="item"><svg class="ic"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+            <div class="item"><svg class="ic"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="item"><svg class="ic"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          </div>
+          <div class="foot"><div class="profile"><div class="av">IS<span class="on"></span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

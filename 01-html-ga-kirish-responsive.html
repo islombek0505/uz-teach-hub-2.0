@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>HTML ga kirish — 1-modul</title>
+<style>
+  :root{
+    --primary:#6366f1;      /* indigo */
+    --primary-d:#4338ca;
+    --accent:#f97316;       /* orange */
+    --pink:#ec4899;
+    --green:#10b981;
+    --yellow:#facc15;
+    --ink:#1e293b;
+    --muted:#64748b;
+    --card:#ffffff;
+    --code-bg:#0f172a;
+    --code-ink:#e2e8f0;
+    --ring:rgba(99,102,241,.25);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(-45deg,#6366f1,#8b5cf6,#ec4899,#f97316);
+    background-size:400% 400%;
+    animation:bgmove 18s ease infinite;
+    min-height:100%;
+    display:flex;align-items:center;justify-content:center;
+    padding:clamp(8px,2.4vw,28px);
+    overflow:hidden;
+  }
+  @keyframes bgmove{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+  }
+
+  /* Progress bar */
+  .progress{
+    position:fixed;top:0;left:0;height:6px;width:0;
+    background:linear-gradient(90deg,var(--yellow),var(--accent),var(--pink));
+    z-index:50;transition:width .35s ease;border-radius:0 4px 4px 0;
+  }
+
+  /* Stage — fills the available viewport (the iframe / the screen) */
+  .stage{
+    width:min(1000px,100%);
+    height:100%;
+    position:relative;
+  }
+
+  .slide{
+    position:absolute;inset:0;
+    background:var(--card);
+    border-radius:clamp(16px,3vw,24px);
+    box-shadow:0 30px 60px rgba(0,0,0,.28);
+    padding:clamp(1.4rem,3.5vw,2.75rem) clamp(1.2rem,4vw,3.25rem);
+    /* leave room for the floating controls bar at the bottom */
+    padding-bottom:clamp(4.75rem,9vh,5.5rem);
+    opacity:0;transform:translateY(24px) scale(.98);
+    pointer-events:none;
+    transition:opacity .45s ease, transform .45s ease;
+    overflow:auto;-webkit-overflow-scrolling:touch;
+    display:flex;flex-direction:column;
+  }
+  /* Center the content when it fits, but fall back to top-aligned + scrollable
+     when it's taller than the slide. Auto-margin spacers do this in every
+     browser — unlike justify-content:center, which makes the overflowing TOP
+     unreachable (the bug where slide headings got cut off on phones). */
+  .slide::before,
+  .slide::after{content:"";display:block;flex:0 0 auto}
+  .slide::before{margin-top:auto}
+  .slide::after{margin-bottom:auto;height:0}
+  .slide.active{opacity:1;transform:none;pointer-events:auto}
+  .slide::-webkit-scrollbar{width:8px}
+  .slide::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:8px}
+
+  .kicker{
+    display:inline-block;font-size:clamp(.72rem,2vw,.875rem);font-weight:700;letter-spacing:.5px;
+    color:var(--primary);background:var(--ring);
+    padding:6px 14px;border-radius:999px;margin-bottom:clamp(12px,2.5vw,18px);width:fit-content;
+  }
+  h1{font-size:clamp(1.7rem,5.5vw,2.9rem);line-height:1.12;margin-bottom:clamp(10px,2vw,16px)}
+  h2{font-size:clamp(1.35rem,4.2vw,2.1rem);line-height:1.18;margin-bottom:clamp(12px,2.2vw,18px)}
+  .lead{font-size:clamp(.95rem,2.5vw,1.25rem);color:var(--muted);line-height:1.6}
+  p{font-size:clamp(.9rem,2.2vw,1.12rem);line-height:1.6;color:var(--ink)}
+  .big-emoji{font-size:clamp(2.6rem,9vw,4rem);margin-bottom:8px;line-height:1}
+
+  .grad-text{
+    background:linear-gradient(90deg,var(--primary),var(--pink),var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+
+  /* Title slide */
+  .title-slide{align-items:center;text-align:center}
+  .title-slide h1{font-size:clamp(2rem,7vw,3.6rem)}
+  .badge-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:clamp(16px,3vw,22px)}
+  .badge{background:#f1f5f9;color:var(--ink);padding:8px 16px;border-radius:999px;font-weight:600;font-size:clamp(.8rem,2vw,.95rem)}
+
+  /* cards grid */
+  .grid{display:grid;gap:clamp(10px,2vw,16px);margin-top:8px}
+  .grid.c2{grid-template-columns:1fr 1fr}
+  .grid.c3{grid-template-columns:repeat(3,1fr)}
+  .tile{
+    background:#f8fafc;border:2px solid #eef2f7;border-radius:16px;padding:clamp(14px,2.6vw,20px);
+    transition:transform .2s ease, box-shadow .2s ease, border-color .2s;
+  }
+  .tile:hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(99,102,241,.15);border-color:var(--ring)}
+  .tile .ic{font-size:clamp(1.6rem,5vw,2.1rem);margin-bottom:8px}
+  .tile h3{font-size:clamp(1rem,2.5vw,1.18rem);margin-bottom:6px}
+  .tile p{font-size:clamp(.82rem,2vw,.94rem);color:var(--muted)}
+
+  /* code */
+  code,.code{font-family:"Fira Code",Consolas,Monaco,monospace}
+  .code-box{
+    background:var(--code-bg);color:var(--code-ink);
+    border-radius:14px;padding:clamp(14px,2.5vw,20px);font-size:clamp(.8rem,2.4vw,1rem);line-height:1.7;
+    white-space:pre;overflow:auto;margin-top:6px;-webkit-overflow-scrolling:touch;
+  }
+  .tag{color:#7dd3fc}
+  .attr{color:#fcd34d}
+  .txt{color:#e2e8f0}
+  .cmt{color:#64748b}
+
+  /* tag anatomy */
+  .anatomy{display:flex;flex-direction:column;align-items:center;gap:clamp(12px,2.5vw,18px);margin-top:10px}
+  .tag-demo{font-size:clamp(1.4rem,6vw,2.5rem);font-family:"Fira Code",Consolas,monospace;background:var(--code-bg);color:#e2e8f0;padding:clamp(14px,3vw,22px) clamp(16px,4vw,30px);border-radius:16px;display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+  .part{cursor:pointer;padding:2px 6px;border-radius:8px;transition:.15s}
+  .part:hover{background:rgba(255,255,255,.12)}
+  .p-open{color:#f472b6}
+  .p-content{color:#86efac}
+  .p-close{color:#fca5a5}
+  .anatomy .explain{font-size:clamp(.95rem,2.4vw,1.12rem);min-height:54px;text-align:center;color:var(--ink);background:#f8fafc;border-radius:12px;padding:14px 18px;width:100%;border:2px dashed #e2e8f0}
+
+  /* structure interactive */
+  .struct{display:grid;grid-template-columns:1.1fr 1fr;gap:clamp(14px,3vw,22px);align-items:center}
+  .struct .code-box{font-size:clamp(.78rem,2.2vw,.95rem);cursor:default}
+  .sline{display:block;padding:2px 6px;border-radius:6px;transition:.15s}
+  .sline.hl{background:rgba(99,102,241,.35);outline:1px solid var(--primary)}
+  .struct .note{font-size:clamp(.95rem,2.3vw,1.06rem);line-height:1.6}
+  .struct .note b{color:var(--primary)}
+
+  /* live editor */
+  .editor-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:clamp(280px,42vh,360px);margin-top:6px}
+  .editor-wrap textarea{
+    width:100%;height:100%;resize:none;border-radius:14px;border:2px solid #e2e8f0;
+    padding:16px;font-family:"Fira Code",Consolas,monospace;font-size:clamp(.78rem,2vw,.9rem);line-height:1.6;
+    background:var(--code-bg);color:#e2e8f0;outline:none;
+  }
+  .editor-wrap textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--ring)}
+  .preview-pane{border-radius:14px;border:2px solid #e2e8f0;overflow:hidden;background:#fff;display:flex;flex-direction:column;min-height:160px}
+  .preview-pane .bar{background:#f1f5f9;padding:8px 12px;font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+  .dot{width:11px;height:11px;border-radius:50%}
+  .preview-pane iframe{flex:1;border:0;width:100%;background:#fff}
+  .hint{font-size:clamp(.82rem,2vw,.9rem);color:var(--muted);margin-top:8px}
+
+  /* roadmap */
+  .road{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .step{display:flex;align-items:center;gap:14px;background:#f8fafc;border-radius:12px;padding:clamp(10px,2vw,14px) clamp(12px,2.5vw,16px);border-left:5px solid var(--primary)}
+  .step .n{min-width:34px;height:34px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .step:nth-child(2){border-left-color:var(--pink)} .step:nth-child(2) .n{background:var(--pink)}
+  .step:nth-child(3){border-left-color:var(--accent)} .step:nth-child(3) .n{background:var(--accent)}
+  .step:nth-child(4){border-left-color:var(--green)} .step:nth-child(4) .n{background:var(--green)}
+  .step h3{font-size:clamp(.95rem,2.3vw,1.06rem)} .step p{font-size:clamp(.8rem,2vw,.88rem);color:var(--muted)}
+
+  /* quiz */
+  .quiz-q{font-size:clamp(1.1rem,3.5vw,1.5rem);font-weight:700;margin-bottom:18px}
+  .opts{display:grid;gap:clamp(8px,1.8vw,12px)}
+  .opt{
+    text-align:left;background:#f8fafc;border:2px solid #e2e8f0;border-radius:14px;
+    padding:clamp(12px,2.4vw,16px) clamp(14px,2.6vw,18px);font-size:clamp(.95rem,2.4vw,1.06rem);cursor:pointer;transition:.15s;font-family:inherit;color:var(--ink);
+  }
+  .opt:hover{border-color:var(--primary);background:#eef2ff}
+  .opt.correct{border-color:var(--green);background:#ecfdf5;color:#065f46;font-weight:600}
+  .opt.wrong{border-color:#ef4444;background:#fef2f2;color:#991b1b}
+  .quiz-fb{margin-top:16px;font-size:clamp(.95rem,2.4vw,1.06rem);font-weight:600;min-height:26px}
+
+  /* controls */
+  .controls{
+    position:fixed;bottom:clamp(10px,2vh,18px);left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:clamp(8px,2vw,14px);
+    background:rgba(255,255,255,.95);padding:8px 14px;border-radius:999px;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:40;max-width:calc(100% - 24px);
+  }
+  .nav-btn{
+    border:0;background:var(--primary);color:#fff;width:clamp(38px,9vw,42px);height:clamp(38px,9vw,42px);border-radius:50%;
+    font-size:20px;cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .nav-btn:hover{background:var(--primary-d);transform:scale(1.06)}
+  .nav-btn:disabled{background:#cbd5e1;cursor:not-allowed;transform:none}
+  .counter{font-weight:700;color:var(--ink);font-size:clamp(.82rem,2vw,.95rem);min-width:54px;text-align:center}
+  .dots{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:40vw}
+  .gdot{width:9px;height:9px;border-radius:50%;background:#cbd5e1;cursor:pointer;transition:.15s}
+  .gdot.active{background:var(--primary);transform:scale(1.3)}
+
+  .hintbar{position:fixed;top:14px;right:16px;background:rgba(255,255,255,.85);color:var(--muted);
+    font-size:13px;padding:6px 12px;border-radius:999px;z-index:40}
+
+  /* Tablets / small laptops: stack the two-column interactive layouts */
+  @media (max-width:860px){
+    .struct,.editor-wrap{grid-template-columns:1fr;height:auto}
+    .editor-wrap textarea{height:180px}
+  }
+
+  /* Phones */
+  @media (max-width:720px){
+    .grid.c3,.grid.c2{grid-template-columns:1fr}
+    .dots{display:none}
+    .hintbar{display:none}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    body{animation:none}
+    .slide{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="hintbar">⌨️ Strelka tugmalari bilan harakatlaning →</div>
+
+<div class="stage" id="stage">
+
+  <!-- 1. TITLE -->
+  <section class="slide title-slide active">
+    <div class="kicker">1-MODUL · KIRISH DARSI</div>
+    <div class="big-emoji">🌐</div>
+    <h1>HTML <span class="grad-text">olamiga</span> xush kelibsiz!</h1>
+    <p class="lead">Veb-saytlar qanday qurilishini bugun birgalikda o'rganamiz.<br>Hech qanday tajriba shart emas.</p>
+    <div class="badge-row">
+      <span class="badge">Yangi boshlayotganlar uchun</span>
+      <span class="badge">Oddiy tilda</span>
+      <span class="badge">Interaktiv</span>
+    </div>
+  </section>
+
+  <!-- 2. What is a website -->
+  <section class="slide">
+    <div class="kicker">SAVOL</div>
+    <h2>Veb-sahifa aslida nima? 🤔</h2>
+    <p class="lead" style="margin-bottom:18px">Har kuni ochadigan saytlaringiz — YouTube, Telegram, Google — bularning hammasi <b>oddiy matn fayllaridan</b> iborat. Brauzer shu matnni o'qiydi va chiroyli sahifaga aylantiradi.</p>
+    <div class="grid c3">
+      <div class="tile"><div class="ic">📄</div><h3>1. Fayl</h3><p>Dasturchi matn (kod) yozadi</p></div>
+      <div class="tile"><div class="ic">🌍</div><h3>2. Brauzer</h3><p>Faylni o'qiydi</p></div>
+      <div class="tile"><div class="ic">✨</div><h3>3. Sahifa</h3><p>Ekranda ko'rinadi</p></div>
+    </div>
+  </section>
+
+  <!-- 3. What is HTML -->
+  <section class="slide">
+    <div class="kicker">TA'RIF</div>
+    <h2>HTML — bu nima?</h2>
+    <p class="lead" style="margin-bottom:16px">HTML to'rtta so'zning qisqartmasi. Qo'rqmang — ma'nosi juda oddiy:</p>
+    <div class="grid c2">
+      <div class="tile"><div class="ic">🔤</div><h3>HyperText</h3><p>Bir-biriga bog'lanadigan matn (havolalar)</p></div>
+      <div class="tile"><div class="ic">🏷️</div><h3>Markup</h3><p>Matnni "belgilash" — bu sarlavha, bu rasm...</p></div>
+      <div class="tile"><div class="ic">🗣️</div><h3>Language</h3><p>Brauzer tushunadigan til</p></div>
+      <div class="tile" style="background:#eef2ff;border-color:var(--ring)"><div class="ic">💡</div><h3>Qisqasi</h3><p>HTML — sahifaga "nima qayerda turishini" aytadigan til</p></div>
+    </div>
+  </section>
+
+  <!-- 4. Three brothers -->
+  <section class="slide">
+    <div class="kicker">KATTA RASM</div>
+    <h2>Sayt = uy 🏠 (3 aka-uka)</h2>
+    <p class="lead" style="margin-bottom:18px">Har bir zamonaviy sayt 3 ta texnologiyadan tashkil topadi. Bizning modulimiz birinchisi — HTML haqida.</p>
+    <div class="grid c3">
+      <div class="tile" style="border-color:var(--ring);background:#eef2ff"><div class="ic">🧱</div><h3>HTML</h3><p><b>Skelet.</b> Devor, eshik, derazalar — uyning tuzilishi</p></div>
+      <div class="tile"><div class="ic">🎨</div><h3>CSS</h3><p><b>Bezak.</b> Rang, oboy, dizayn — chiroyli ko'rinish</p></div>
+      <div class="tile"><div class="ic">⚡</div><h3>JavaScript</h3><p><b>Harakat.</b> Tugma bosilsa nimadir bo'lishi</p></div>
+    </div>
+    <p class="hint">👉 Avval mustahkam skelet — HTML ni o'rganamiz. Qolgan ikkitasi keyingi modullarda ko'rib chiqamiz.</p>
+  </section>
+
+  <!-- 5. Where it runs -->
+  <section class="slide">
+    <div class="kicker">QAYERDA?</div>
+    <h2>HTML qayerda "jonlanadi"? 🌍</h2>
+    <p class="lead" style="margin-bottom:18px">Maxsus dastur shart emas. HTML faylni shunchaki <b>brauzerda</b> ochasiz — Chrome, Edge, Safari yoki Firefox. Telefoningizdagi brauzer ham bo'ladi!</p>
+    <div class="grid c2">
+      <div class="tile"><div class="ic">💻</div><h3>Yozasiz</h3><p>Oddiy matn muharririda <code>.html</code> fayl yaratasiz</p></div>
+      <div class="tile"><div class="ic">🖱️</div><h3>Ochasiz</h3><p>Faylni 2 marta bosasiz va u brauzerda sayt bo'lib ko'rinadi</p></div>
+    </div>
+  </section>
+
+  <!-- 6. What you can build -->
+  <section class="slide">
+    <div class="kicker">IMKONIYATLAR</div>
+    <h2>HTML bilan nimalar yasash mumkin? 🚀</h2>
+    <div class="grid c3" style="margin-top:10px">
+      <div class="tile"><div class="ic">📰</div><h3>Bloglar</h3><p>Maqola va yangiliklar sahifalari</p></div>
+      <div class="tile"><div class="ic">🛒</div><h3>Internet do'kon</h3><p>Mahsulot kartalari va narxlar</p></div>
+      <div class="tile"><div class="ic">📄</div><h3>Portfolio</h3><p>O'zingiz haqingizda sahifa</p></div>
+      <div class="tile"><div class="ic">📝</div><h3>Formalar</h3><p>Ro'yxatdan o'tish, so'rovnomalar</p></div>
+      <div class="tile"><div class="ic">📊</div><h3>Jadvallar</h3><p>Ma'lumotlarni tartibli ko'rsatish</p></div>
+      <div class="tile"><div class="ic">🎓</div><h3>Va boshqa</h3><p>Internetdagi har bir sahifa!</p></div>
+    </div>
+  </section>
+
+  <!-- 7. Tag anatomy -->
+  <section class="slide">
+    <div class="kicker">ENG MUHIM TUSHUNCHA</div>
+    <h2>Teg (tag) nima? 🏷️</h2>
+    <p class="lead" style="margin-bottom:6px">HTML butunlay <b>teglardan</b> iborat. Quyidagi qismlarning ustiga bosing 👇</p>
+    <div class="anatomy">
+      <div class="tag-demo">
+        <span class="part p-open" data-ex="🔓 Ochuvchi teg: bu yerdan element boshlanadi. Burchakli qavs ichida yoziladi: &lt;h1&gt;">&lt;h1&gt;</span>
+        <span class="part p-content" data-ex="✍️ Kontent: foydalanuvchi ekranda ko'radigan matn shu yerda turadi.">Salom dunyo</span>
+        <span class="part p-close" data-ex="🔒 Yopuvchi teg: elementni tugatadi. Faqat qiya chiziq (/) qo'shiladi: &lt;/h1&gt;">&lt;/h1&gt;</span>
+      </div>
+      <div class="explain" id="anatomyExplain">👆 Qismlardan birini bosing va izohini o'qing.</div>
+    </div>
+    <p class="hint">🧠 Qoida: ko'pchilik teglar <b>juft</b> bo'ladi — ochiladi va yopiladi.</p>
+  </section>
+
+  <!-- 8. Document structure -->
+  <section class="slide">
+    <div class="kicker">SKELET</div>
+    <h2>Har bir HTML sahifa skeleti</h2>
+    <div class="struct">
+      <div class="code-box" id="structCode"><span class="sline" data-k="doc">&lt;!DOCTYPE html&gt;</span><span class="sline" data-k="html">&lt;html&gt;</span><span class="sline" data-k="head">  &lt;head&gt;
+    &lt;title&gt;Sarlavha&lt;/title&gt;
+  &lt;/head&gt;</span><span class="sline" data-k="body">  &lt;body&gt;
+    Salom dunyo!
+  &lt;/body&gt;</span><span class="sline" data-k="html">&lt;/html&gt;</span></div>
+      <div class="note" id="structNote">
+        <p>👈 Qatorlar ustiga sichqonchani olib boring.</p>
+        <p style="margin-top:10px;color:var(--muted);font-size:15px">Har bir sahifa shu 4 qismdan iborat: e'lon, html, head (yashirin sozlamalar) va body (ko'rinadigan qism).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Live playground -->
+  <section class="slide">
+    <div class="kicker">🎮 JONLI MASHQ</div>
+    <h2>O'zingiz sinab ko'ring!</h2>
+    <p class="hint" style="margin-top:0;margin-bottom:8px">Chap tomonda kodni o'zgartiring — o'ng tomonda natija darhol ko'rinadi.</p>
+    <div class="editor-wrap">
+      <textarea id="liveCode" spellcheck="false">&lt;h1&gt;Salom, men HTML o'rganyapman!&lt;/h1&gt;
+
+&lt;p&gt;Bu mening birinchi sahifam.&lt;/p&gt;
+
+&lt;p&gt;Matnni o'zgartirib ko'ring&lt;/p&gt;</textarea>
+      <div class="preview-pane">
+        <div class="bar"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#facc15"></span><span class="dot" style="background:#22c55e"></span>&nbsp; natija.html</div>
+        <iframe id="livePreview" title="natija"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Tools -->
+  <section class="slide">
+    <div class="kicker">TAYYORGARLIK</div>
+    <h2>Bizga nima kerak? 🧰</h2>
+    <p class="lead" style="margin-bottom:18px">Boshiga komputer va internet. Komputer bo'lmasa telefondan ham foydalansa bo'ladi(Faqat malum muddat!).</p>
+    <div class="grid c2">
+      <div class="tile"><div class="ic">🌍</div><h3>Brauzer</h3><p>Chrome yoki Edge — natijani ko'rish uchun. Allaqachon bor!</p></div>
+      <div class="tile"><div class="ic">⌨️</div><h3>Kod muharriri</h3><p>VS Code — kod yozish uchun bepul dastur (tavsiya etiladi)</p></div>
+    </div>
+  </section>
+
+  <!-- 11. Roadmap -->
+  <section class="slide">
+    <div class="kicker">YO'L XARITASI</div>
+    <h2>Bu modulda o'rganamiz 🗺️</h2>
+    <div class="road">
+      <div class="step"><div class="n">1</div><div><h3>Birinchi sahifa</h3><p>Sarlavhalar, paragraflar va matn formatlash</p></div></div>
+      <div class="step"><div class="n">2</div><div><h3>Ro'yxat va havolalar</h3><p>Tartibli ro'yxatlar va boshqa saytlarga o'tish</p></div></div>
+      <div class="step"><div class="n">3</div><div><h3>Rasm va jadvallar</h3><p>Suratlar qo'shish, ma'lumotni jadvalga joylash</p></div></div>
+      <div class="step"><div class="n">4</div><div><h3>Formalar</h3><p>Tugma, maydon va ro'yxatdan o'tish formalari</p></div></div>
+    </div>
+  </section>
+
+  <!-- 12. Quiz -->
+  <section class="slide">
+    <div class="kicker">🧠 MINI TEST</div>
+    <h2>Eslab qoldikmi?</h2>
+    <div class="quiz-q">HTML asosan nimadan tashkil topadi?</div>
+    <div class="opts" id="quizOpts">
+      <button class="opt" data-correct="false">🎨 Ranglar va rasmlardan</button>
+      <button class="opt" data-correct="true">🏷️ Teglardan</button>
+      <button class="opt" data-correct="false">🔢 Faqat raqamlardan</button>
+    </div>
+    <div class="quiz-fb" id="quizFb"></div>
+  </section>
+
+  <!-- 13. Closing -->
+  <section class="slide title-slide">
+    <div class="big-emoji">🎉</div>
+    <h1>Tayyormisiz? <span class="grad-text">Boshladik!</span></h1>
+    <p class="lead">Endi HTML nimaligini bilasiz. Keyingi darsda birinchi haqiqiy sahifamizni o'z qo'limiz bilan yozamiz.</p>
+    <div class="badge-row">
+      <span class="badge">✅ HTML = veb skeleti</span>
+      <span class="badge">✅ Teglardan iborat</span>
+      <span class="badge">✅ Brauzerda ishlaydi</span>
+    </div>
+  </section>
+
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Oldingi">‹</button>
+  <span class="counter" id="counter">1 / 13</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Keyingi">›</button>
+  <div class="dots" id="dots"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let cur = 0;
+
+  const progress = document.getElementById('progress');
+  const counter  = document.getElementById('counter');
+  const prevBtn  = document.getElementById('prevBtn');
+  const nextBtn  = document.getElementById('nextBtn');
+  const dotsWrap = document.getElementById('dots');
+
+  // build dots
+  slides.forEach((_,i)=>{
+    const d=document.createElement('div');
+    d.className='gdot'+(i===0?' active':'');
+    d.addEventListener('click',()=>go(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots=Array.from(dotsWrap.children);
+
+  function go(n){
+    cur=Math.max(0,Math.min(total-1,n));
+    slides.forEach((s,i)=>s.classList.toggle('active',i===cur));
+    dots.forEach((d,i)=>d.classList.toggle('active',i===cur));
+    counter.textContent=(cur+1)+' / '+total;
+    progress.style.width=((cur)/(total-1)*100)+'%';
+    prevBtn.disabled=cur===0;
+    nextBtn.disabled=cur===total-1;
+    // reset scroll to top of the newly shown slide
+    slides[cur].scrollTop = 0;
+  }
+  function next(){go(cur+1)}
+  function prev(){go(cur-1)}
+
+  prevBtn.addEventListener('click',prev);
+  nextBtn.addEventListener('click',next);
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    if(e.key==='Home')go(0);
+    if(e.key==='End')go(total-1);
+  });
+
+  // touch swipe (horizontal only — vertical is left for scrolling content)
+  let tx=0, ty=0;
+  const stageEl=document.getElementById('stage');
+  stageEl.addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX;ty=e.changedTouches[0].clientY},{passive:true});
+  stageEl.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx;
+    const dy=e.changedTouches[0].clientY-ty;
+    if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)){dx<0?next():prev()}
+  },{passive:true});
+
+  // --- Tag anatomy interactivity ---
+  const explainBox=document.getElementById('anatomyExplain');
+  document.querySelectorAll('.part').forEach(p=>{
+    p.addEventListener('click',()=>{
+      explainBox.innerHTML=p.dataset.ex;
+      explainBox.style.borderColor='var(--primary)';
+    });
+  });
+
+  // --- Structure hover + tap (mobile) ---
+  const structNote=document.getElementById('structNote');
+  const notes={
+    doc:'<p><b>&lt;!DOCTYPE html&gt;</b></p><p style="margin-top:8px;color:var(--muted);font-size:15px">Brauzerga "bu HTML5 sahifa" deb e\'lon qiladi. Har doim eng birinchi qator.</p>',
+    html:'<p><b>&lt;html&gt;</b></p><p style="margin-top:8px;color:var(--muted);font-size:15px">Butun sahifani o\'rab turadigan asosiy teg — eng tashqi qobiq.</p>',
+    head:'<p><b>&lt;head&gt;</b></p><p style="margin-top:8px;color:var(--muted);font-size:15px">Yashirin qism: sahifa nomi (title) va sozlamalar. Ekranda ko\'rinmaydi.</p>',
+    body:'<p><b>&lt;body&gt;</b></p><p style="margin-top:8px;color:var(--muted);font-size:15px">Ko\'rinadigan qism! Matn, rasm, tugma — hammasi shu yerda yoziladi.</p>'
+  };
+  document.querySelectorAll('#structCode .sline').forEach(line=>{
+    const show=()=>{
+      document.querySelectorAll('#structCode .sline').forEach(l=>l.classList.remove('hl'));
+      line.classList.add('hl');
+      structNote.innerHTML=notes[line.dataset.k];
+    };
+    line.addEventListener('mouseenter',show);
+    line.addEventListener('click',show);
+  });
+
+  // --- Live editor ---
+  const codeArea=document.getElementById('liveCode');
+  const preview=document.getElementById('livePreview');
+  function decode(s){const t=document.createElement('textarea');t.innerHTML=s;return t.value}
+  function render(){
+    const html=decode(codeArea.value);
+    preview.srcdoc='<style>body{font-family:Segoe UI,Arial,sans-serif;padding:14px;color:#1e293b}</style>'+html;
+  }
+  codeArea.addEventListener('input',render);
+  render();
+
+  // --- Quiz ---
+  const quizFb=document.getElementById('quizFb');
+  document.querySelectorAll('#quizOpts .opt').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const correct=btn.dataset.correct==='true';
+      document.querySelectorAll('#quizOpts .opt').forEach(b=>b.disabled=true);
+      if(correct){
+        btn.classList.add('correct');
+        quizFb.style.color='#059669';
+        quizFb.textContent='✅ To\'g\'ri! HTML butunlay teglardan iborat. Barakalla!';
+      }else{
+        btn.classList.add('wrong');
+        document.querySelector('#quizOpts .opt[data-correct="true"]').classList.add('correct');
+        quizFb.style.color='#dc2626';
+        quizFb.textContent='❌ Yo\'q. To\'g\'ri javob — teglardan. Yashil variantga qarang!';
+      }
+    });
+  });
+
+  go(0);
+</script>
+</body>
+</html>

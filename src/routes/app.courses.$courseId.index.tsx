@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { PresentationSlidesViewer } from "@/components/presentation-viewer";
+import { CourseDetailSkeleton } from "@/components/student/loaders";
 
 export const Route = createFileRoute("/app/courses/$courseId/")({
   component: CourseDetail,
@@ -60,7 +61,7 @@ function CourseDetail() {
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
   const [expandedLessonId, setExpandedLessonId] = useState<string | null>(null);
 
-  if (isLoading || !data) return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
+  if (isLoading || !data) return <CourseDetailSkeleton />;
   const { course, enrolled, completedSet, presentations, isTrial } = data;
 
   const allLessons = course.modules.flatMap((m: any) => m.lessons);
@@ -73,7 +74,7 @@ function CourseDetail() {
   return (
     <>
       <Topbar title={course.title} />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div className="overflow-hidden rounded-2xl">
           <div className="relative aspect-[16/5] bg-muted bg-cover bg-center" style={course.cover_url ? { backgroundImage: `url(${course.cover_url})` } : undefined}>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -92,7 +93,7 @@ function CourseDetail() {
         </div>
 
         {!enrolled ? (
-          <Card className="border-warning/40 bg-warning/5">
+          <Card className="glass border-warning/40">
             <CardContent className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -107,7 +108,7 @@ function CourseDetail() {
             </CardContent>
           </Card>
         ) : (
-          <Card>
+          <Card className="glass border-transparent">
             <CardContent className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="text-sm font-medium">Sizning taraqqiyotingiz</div>
@@ -124,11 +125,11 @@ function CourseDetail() {
         <div>
           <h2 className="mb-4 font-display text-xl font-semibold">Modullar</h2>
           {course.modules.length === 0 && (
-            <Card><CardContent className="p-10 text-center text-muted-foreground">Bu kursda hali modullar qo'shilmagan</CardContent></Card>
+            <Card className="glass border-transparent"><CardContent className="p-10 text-center text-muted-foreground">Bu kursda hali modullar qo'shilmagan</CardContent></Card>
           )}
 
           {course.modules.length > 0 && (
-            <div className="rounded-2xl border bg-card p-4 sm:p-6">
+            <div className="glass rounded-2xl border-transparent p-4 sm:p-6">
               <div className="-mx-2 mb-2 flex gap-5 overflow-x-auto px-2 pb-2 sm:gap-8">
                 {course.modules.map((m: any, idx: number) => {
                   const isActive = activeModule?.id === m.id;
@@ -250,7 +251,7 @@ function CoursePresentationCard({ item, locked = false }: { item: any; locked?: 
   const [open, setOpen] = useState(false);
   const slides: string[] = Array.isArray(item.slides) ? item.slides : [];
   return (
-    <Card>
+    <Card className="glass border-transparent">
       <CardContent className="space-y-3 p-4">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">

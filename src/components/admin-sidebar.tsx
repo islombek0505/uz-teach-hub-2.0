@@ -62,7 +62,7 @@ export function AdminSidebar() {
             <Shield className="h-5 w-5" />
           </div>
           <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-            <span className="font-display text-base font-semibold text-sidebar-foreground">LearnHub</span>
+            <span className="font-display text-base font-semibold text-sidebar-foreground">OnlineTalim</span>
             <span className="text-xs text-sidebar-foreground/60">Admin paneli</span>
           </div>
         </Link>

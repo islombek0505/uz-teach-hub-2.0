@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OnlineTalim — Auth glassmorphism preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --foreground: oklch(0.18 0.04 250);
+        --muted-foreground: oklch(0.5 0.03 240);
+        --primary: oklch(0.32 0.09 240);
+        --success: oklch(0.62 0.15 155);
+        --gradient-hero: linear-gradient(135deg, oklch(0.18 0.06 245) 0%, oklch(0.32 0.09 240) 50%, oklch(0.55 0.13 210) 100%);
+        --gradient-accent: linear-gradient(135deg, oklch(0.55 0.13 220), oklch(0.78 0.1 195));
+        --gradient-primary: linear-gradient(135deg, oklch(0.22 0.06 245), oklch(0.55 0.13 220));
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: "Figtree", system-ui, sans-serif; color: var(--foreground); }
+      h1, h2, h3 { font-family: "Outfit", system-ui, sans-serif; letter-spacing: -0.02em; }
+
+      .auth-bg {
+        position: relative; overflow: hidden; min-height: 100vh;
+        display: grid; place-items: center; padding: 28px; gap: 40px;
+        background:
+          radial-gradient(40rem 40rem at 12% 18%, oklch(0.55 0.13 220 / 0.55), transparent 45%),
+          radial-gradient(36rem 36rem at 88% 12%, oklch(0.78 0.1 195 / 0.45), transparent 50%),
+          radial-gradient(44rem 44rem at 50% 108%, oklch(0.62 0.15 155 / 0.35), transparent 55%),
+          var(--gradient-hero);
+      }
+      .auth-bg::before {
+        content: ""; position: absolute; inset: 0; z-index: 0;
+        background-image: radial-gradient(oklch(1 0 0 / 0.06) 1px, transparent 1px);
+        background-size: 22px 22px;
+        -webkit-mask-image: radial-gradient(circle at 50% 40%, black, transparent 75%);
+        mask-image: radial-gradient(circle at 50% 40%, black, transparent 75%);
+      }
+      .orb { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .55; z-index: 0; }
+      .orb.a { width: 340px; height: 340px; top: -60px; left: -40px; background: oklch(0.7 0.12 195 / .6); animation: fa 11s ease-in-out infinite; }
+      .orb.b { width: 300px; height: 300px; bottom: -70px; right: -40px; background: oklch(0.55 0.13 220 / .6); animation: fb 14s ease-in-out infinite; }
+      @keyframes fa { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(18px,-34px) scale(1.08)} }
+      @keyframes fb { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-24px,26px) scale(1.1)} }
+
+      .card {
+        position: relative; z-index: 1; width: 100%; max-width: 880px;
+        display: grid; grid-template-columns: 0.82fr 1fr; overflow: hidden;
+        border-radius: 28px; border: 1px solid oklch(1 0 0 / 0.6);
+        background-color: oklch(1 0 0 / 0.8);
+        backdrop-filter: blur(20px) saturate(160%); -webkit-backdrop-filter: blur(20px) saturate(160%);
+        box-shadow: 0 30px 80px -30px oklch(0.15 0.05 245 / 0.7), inset 0 1px 0 0 oklch(1 0 0 / 0.7);
+      }
+      .brandpane { position: relative; overflow: hidden; padding: 36px; color: #fff; display: flex; flex-direction: column; justify-content: space-between; background: var(--gradient-hero); }
+      .brandpane .b1 { position:absolute; width:200px; height:200px; border-radius:50%; background: oklch(1 0 0 / .1); filter: blur(40px); right:-60px; top:-60px; }
+      .brandpane .b2 { position:absolute; width:170px; height:170px; border-radius:50%; background: oklch(.78 .1 195 / .3); filter: blur(40px); left:30px; bottom:-70px; }
+      .logo { display: flex; align-items: center; gap: 10px; position: relative; }
+      .logo .m { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: oklch(1 0 0 / .15); backdrop-filter: blur(4px); }
+      .logo b { font-family: "Outfit"; font-size: 20px; }
+      .feat { display: flex; gap: 12px; align-items: flex-start; margin-top: 16px; position: relative; }
+      .feat .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: oklch(1 0 0 / .12); box-shadow: inset 0 0 0 1px oklch(1 0 0 / .15); flex-shrink: 0; }
+      .feat .t { font-size: 14px; font-weight: 600; }
+      .feat .d { font-size: 12px; color: oklch(1 0 0 / .6); }
+      .stats { display: flex; gap: 24px; border-top: 1px solid oklch(1 0 0 / .15); padding-top: 18px; font-size: 12px; color: oklch(1 0 0 / .65); position: relative; }
+      .stats b { font-family: "Outfit"; font-size: 20px; color: #fff; }
+
+      .formpane { padding: 40px; }
+      .formpane h1 { font-size: 30px; font-weight: 700; }
+      .sub { color: var(--muted-foreground); font-size: 14px; margin-top: 8px; }
+      .label { font-size: 14px; font-weight: 500; color: oklch(0.18 0.04 250 / .9); display:block; margin-bottom: 6px; }
+      .field { position: relative; margin-top: 16px; }
+      .field .ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); width:18px; height:18px; }
+      .field .eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); cursor:pointer; }
+      .glass-field {
+        width: 100%; height: 48px; border-radius: 12px; padding: 0 44px;
+        background-color: oklch(1 0 0 / .5); border: 1px solid oklch(0.3 0.06 245 / .14);
+        backdrop-filter: blur(6px); font-size: 15px; color: var(--foreground); outline: none;
+        transition: border-color .2s, background-color .2s, box-shadow .2s;
+      }
+      .glass-field::placeholder { color: oklch(0.5 0.03 240 / .8); }
+      .glass-field:focus { background-color: oklch(1 0 0 / .85); border-color: oklch(0.55 0.13 220 / .65); box-shadow: 0 0 0 4px oklch(0.55 0.13 220 / .14); }
+      .btn-grad {
+        width: 100%; height: 48px; margin-top: 22px; border: none; border-radius: 12px; cursor: pointer;
+        background: var(--gradient-primary); color: #fff; font-family:"Figtree"; font-size: 15px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        box-shadow: 0 10px 24px -10px oklch(0.32 0.09 240 / .55); transition: filter .2s, transform .15s;
+      }
+      .btn-grad:hover { filter: brightness(1.08) saturate(1.05); }
+      .btn-grad:active { transform: translateY(1px) scale(.995); }
+      .forgot { display:flex; justify-content: space-between; align-items:center; margin-top:16px; margin-bottom:6px; }
+      .forgot a { font-size: 12px; color: var(--primary); text-decoration:none; }
+      .switch { text-align: center; font-size: 14px; color: var(--muted-foreground); margin-top: 22px; }
+      .switch a { color: var(--primary); font-weight: 600; text-decoration: none; }
+      .hint { display:flex; gap:10px; align-items:flex-start; margin-top: 24px; padding: 12px; border-radius: 12px; border: 1px solid oklch(1 0 0 / .3); background: oklch(1 0 0 / .3); font-size: 12px; color: var(--muted-foreground); }
+      .steps { display: flex; align-items: center; gap: 8px; margin-bottom: 22px; }
+      .step { display: flex; align-items: center; gap: 8px; flex: 1; }
+      .dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex-shrink:0; }
+      .dot.done { background: var(--success); color: #fff; }
+      .dot.active { background: var(--primary); color: #fff; }
+      .dot.idle { background: oklch(0.18 0.04 250 / .1); color: var(--muted-foreground); }
+      .stepname { font-size: 12px; font-weight: 500; }
+      .bar2 { height: 2px; border-radius: 99px; flex: 1; }
+      .otp { display: flex; gap: 10px; justify-content: center; margin: 26px 0; }
+      .otp .s { width: 44px; height: 48px; border-radius: 12px; border: 1px solid oklch(0.3 0.06 245 / .14); background: oklch(1 0 0 / .5); display:grid; place-items:center; font-family:"Outfit"; font-size: 20px; font-weight: 600; }
+      .otp .s.on { border-color: oklch(0.55 0.13 220 / .65); box-shadow: 0 0 0 3px oklch(0.55 0.13 220 / .14); }
+      .note { position: relative; z-index: 1; max-width: 880px; color: oklch(1 0 0 / .8); font-size: 13px; text-align:center; }
+      .tag { display:inline-block; font-size: 11px; padding: 2px 9px; border-radius: 7px; background: oklch(1 0 0 / .15); margin-bottom: 8px; }
+      .ic-svg { width:18px; height:18px; stroke: currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+      @media (max-width: 760px) { .card { grid-template-columns: 1fr; } .brandpane { display:none; } }
+    </style>
+  </head>
+  <body>
+    <div class="auth-bg">
+      <div class="orb a"></div>
+      <div class="orb b"></div>
+
+      <div class="note">
+        <span class="tag">PREVIEW · KIRISH</span><br />
+        Login sahifasining yangi glassmorphism ko‘rinishi (haqiqiy CSS qiymatlari).
+      </div>
+
+      <!-- LOGIN -->
+      <div class="card">
+        <div class="brandpane">
+          <div class="b1"></div><div class="b2"></div>
+          <div class="logo"><div class="m">🎓</div><b>OnlineTalim</b></div>
+          <div style="position:relative">
+            <h2 style="font-size:27px;font-weight:700;line-height:1.2">Bilim sari eng qulay yo‘l</h2>
+            <p style="font-size:14px;color:oklch(1 0 0 / .7);margin-top:8px">Bir martalik obuna bilan barcha kurslar, video darslar va testlarga to‘liq ruxsat.</p>
+            <div class="feat"><div class="ic">▶</div><div><div class="t">HD video darslar</div><div class="d">Adaptiv sifat, uzluksiz oqim</div></div></div>
+            <div class="feat"><div class="ic">🏅</div><div><div class="t">Testlar va sertifikat</div><div class="d">Har dars yakunida amaliy test</div></div></div>
+            <div class="feat"><div class="ic">🛡</div><div><div class="t">Himoyalangan kontent</div><div class="d">Materiallar faqat siz uchun</div></div></div>
+          </div>
+          <div class="stats"><div><b>287+</b><br>o‘quvchi</div><div><b>60+</b><br>darslik</div><div><b>3+</b><br>kurslar</div></div>
+        </div>
+        <div class="formpane">
+          <h1>Xush kelibsiz!</h1>
+          <p class="sub">Davom etish uchun telefon raqam va parolingiz bilan kiring.</p>
+          <div class="field">
+            <span class="ic">📞</span>
+            <input class="glass-field" placeholder="+998 90 123 45 67" />
+          </div>
+          <div class="forgot"><span class="label" style="margin:0">Parol</span><a href="#">Parolni unutdingizmi?</a></div>
+          <div class="field" style="margin-top:0">
+            <span class="ic">🔒</span>
+            <input class="glass-field" type="password" value="parol123" />
+            <span class="eye">👁</span>
+          </div>
+          <button class="btn-grad">Kirish →</button>
+          <div class="switch">Hisobingiz yo‘qmi? <a href="#">Ro‘yxatdan o‘tish</a></div>
+          <div class="hint">📞 <span>Telefon raqamingiz <b>+998</b> bilan boshlanishi shart. Raqamlardan tashqari belgilar e'tiborga olinmaydi.</span></div>
+        </div>
+      </div>
+
+      <div class="note"><span class="tag">PREVIEW · RO‘YXATDAN O‘TISH</span></div>
+
+      <!-- REGISTER -->
+      <div class="card">
+        <div class="brandpane">
+          <div class="b1"></div><div class="b2"></div>
+          <div class="logo"><div class="m">🎓</div><b>OnlineTalim</b></div>
+          <div style="position:relative">
+            <h2 style="font-size:27px;font-weight:700;line-height:1.2">Bugun o‘rganishni boshlang</h2>
+            <p style="font-size:14px;color:oklch(1 0 0 / .7);margin-top:8px">1 haftalik bepul sinov bilan barcha imkoniyatlarni sinab ko‘ring.</p>
+            <div class="feat"><div class="ic">▶</div><div><div class="t">HD video darslar</div><div class="d">Adaptiv sifat, uzluksiz oqim</div></div></div>
+            <div class="feat"><div class="ic">🏅</div><div><div class="t">Testlar va sertifikat</div><div class="d">Har dars yakunida amaliy test</div></div></div>
+          </div>
+          <div class="stats"><div><b>287+</b><br>o‘quvchi</div><div><b>60+</b><br>darslik</div><div><b>3+</b><br>kurslar</div></div>
+        </div>
+        <div class="formpane">
+          <div class="steps">
+            <div class="step"><div class="dot done">✓</div><span class="stepname" style="color:oklch(0.18 0.04 250 / .8)">Ma'lumot</span><div class="bar2" style="background:var(--success)"></div></div>
+            <div class="step"><div class="dot active">2</div><span class="stepname" style="color:oklch(0.18 0.04 250 / .8)">Tasdiqlash</span><div class="bar2" style="background:oklch(0.18 0.04 250 / .1)"></div></div>
+            <div class="step"><div class="dot idle">3</div><span class="stepname" style="color:var(--muted-foreground)">Parol</span></div>
+          </div>
+          <h1>Telefonni tasdiqlang</h1>
+          <p class="sub">+998 90 123 45 67 raqamidagi Telegramga yuborilgan 6 xonali kodni kiriting.</p>
+          <div class="otp">
+            <div class="s">2</div><div class="s">9</div><div class="s on">4</div><div class="s"></div><div class="s"></div><div class="s"></div>
+          </div>
+          <button class="btn-grad">Tasdiqlash</button>
+          <div class="switch" style="margin-top:14px">← Raqamni o‘zgartirish</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

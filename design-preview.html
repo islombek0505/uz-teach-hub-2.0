@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OnlineTalim — Student panel glassmorphism preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* ---- Exact tokens from the app (Ocean Deep palette, oklch) ---- */
+      :root {
+        --background: oklch(0.985 0.005 240);
+        --foreground: oklch(0.18 0.04 250);
+        --primary: oklch(0.32 0.09 240);
+        --muted-foreground: oklch(0.5 0.03 240);
+        --success: oklch(0.62 0.15 155);
+        --accent: oklch(0.78 0.1 195);
+        --gradient-hero: linear-gradient(
+          135deg,
+          oklch(0.18 0.06 245) 0%,
+          oklch(0.32 0.09 240) 50%,
+          oklch(0.55 0.13 210) 100%
+        );
+        --gradient-accent: linear-gradient(135deg, oklch(0.55 0.13 220), oklch(0.78 0.1 195));
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Figtree", system-ui, sans-serif;
+        color: var(--foreground);
+        min-height: 100vh;
+        /* .app-surface — the layered gradient the glass refracts */
+        background-color: var(--background);
+        background-image:
+          radial-gradient(60rem 60rem at 8% -10%, oklch(0.78 0.1 195 / 0.18), transparent 55%),
+          radial-gradient(50rem 50rem at 100% 0%, oklch(0.55 0.13 220 / 0.16), transparent 50%),
+          radial-gradient(70rem 70rem at 50% 120%, oklch(0.62 0.15 155 / 0.1), transparent 55%);
+        background-attachment: fixed;
+        padding: 0;
+      }
+      h1, h2, h3, h4 { font-family: "Outfit", system-ui, sans-serif; letter-spacing: -0.02em; }
+      .layout { display: flex; min-height: 100vh; }
+
+      /* Sidebar (solid navy anchor — unchanged) */
+      .sidebar {
+        width: 240px; flex-shrink: 0; padding: 18px 14px; color: oklch(0.92 0.015 230);
+        background: oklch(0.22 0.06 245);
+      }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 26px; }
+      .brand .logo {
+        width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+        background: var(--gradient-accent); color: #06212b;
+      }
+      .brand b { font-family: "Outfit"; font-size: 17px; }
+      .brand span { display: block; font-size: 11px; opacity: 0.6; }
+      .nav a {
+        display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px;
+        color: oklch(0.92 0.015 230); text-decoration: none; font-size: 14px; margin-bottom: 2px;
+      }
+      .nav a.active { background: oklch(0.28 0.07 245); }
+      .nav a:hover:not(.active) { background: oklch(0.26 0.06 245); }
+      .dot { width: 18px; height: 18px; border-radius: 5px; background: currentColor; opacity: 0.7; }
+
+      .content { flex: 1; min-width: 0; }
+      /* Glass topbar */
+      .topbar {
+        position: sticky; top: 0; height: 60px; display: flex; align-items: center; gap: 12px;
+        padding: 0 22px; border-bottom: 1px solid oklch(1 0 0 / 0.3);
+        background: oklch(0.985 0.005 240 / 0.6);
+        backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%);
+      }
+      .topbar h3 { font-size: 18px; font-weight: 600; }
+      main { padding: 22px; display: flex; flex-direction: column; gap: 22px; }
+
+      /* ---- .glass / .glass-strong (exact values) ---- */
+      .glass {
+        background-color: oklch(1 0 0 / 0.55);
+        backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%);
+        border: 1px solid oklch(1 0 0 / 0.55);
+        box-shadow: 0 8px 32px -12px oklch(0.32 0.09 240 / 0.22), inset 0 1px 0 0 oklch(1 0 0 / 0.6);
+      }
+      .glass-hover { transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s; }
+      .glass-hover:hover { transform: translateY(-2px); box-shadow: 0 16px 48px -16px oklch(0.32 0.09 240 / 0.32); }
+
+      .hero {
+        border-radius: 24px; padding: 26px; color: #fff; background: var(--gradient-hero);
+        box-shadow: 0 10px 30px -10px oklch(0.32 0.09 240 / 0.25); position: relative; overflow: hidden;
+      }
+      .hero h2 { font-size: 26px; }
+      .hero p { opacity: 0.8; margin-top: 4px; }
+      .hero .pill {
+        display: inline-flex; gap: 6px; align-items: center; margin-top: 14px; font-size: 12px;
+        background: rgba(255,255,255,0.12); padding: 5px 12px; border-radius: 999px; backdrop-filter: blur(6px);
+      }
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      .stat { border-radius: 18px; padding: 18px; }
+      .stat .ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: oklch(0.32 0.09 240 / 0.1); color: var(--primary); }
+      .stat .num { font-family: "Outfit"; font-size: 30px; font-weight: 700; margin-top: 14px; }
+      .stat .lbl { color: var(--muted-foreground); font-size: 13px; margin-top: 2px; }
+      .row { display: grid; grid-template-columns: 1fr 320px; gap: 22px; }
+      .card { border-radius: 18px; padding: 20px; }
+      .card h3 { font-size: 18px; margin-bottom: 14px; }
+      .lesson { display: flex; gap: 14px; align-items: center; padding: 12px; border-radius: 14px; }
+      .lesson .thumb { width: 120px; height: 68px; border-radius: 10px; background: var(--gradient-accent); flex-shrink: 0; }
+      .lesson .bar { height: 8px; border-radius: 99px; background: oklch(0.9 0.015 230); margin-top: 8px; overflow: hidden; }
+      .lesson .bar i { display: block; height: 100%; background: var(--gradient-accent); }
+      .badge { font-size: 11px; padding: 3px 9px; border-radius: 7px; background: oklch(0.95 0.015 230); color: var(--primary); }
+      .badge.green { background: oklch(0.62 0.15 155 / 0.15); color: oklch(0.42 0.12 155); }
+      .videoframe { aspect-ratio: 16/9; border-radius: 16px; background: #000; padding: 6px; }
+      .videoframe .inner { width: 100%; height: 100%; border-radius: 11px; background: radial-gradient(circle at 50% 45%, oklch(0.3 0.08 240), #02060b); display: grid; place-items: center; color: rgba(255,255,255,0.55); }
+
+      /* shimmer skeleton */
+      .sk { border-radius: 10px; background: oklch(0.18 0.04 250 / 0.06); position: relative; overflow: hidden; }
+      .sk::after { content:""; position:absolute; inset:0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.5), transparent); animation: sh 1.6s infinite; }
+      @keyframes sh { 100% { transform: translateX(100%); } }
+      .note { max-width: 1100px; margin: 0 auto; padding: 14px 22px; font-size: 13px; color: var(--muted-foreground); }
+      .tag { display:inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; background: oklch(0.78 0.1 195 / 0.2); color: oklch(0.3 0.06 240); margin-right:6px;}
+    </style>
+  </head>
+  <body>
+    <div class="note">
+      <span class="tag">PREVIEW</span> Bu — student panelning yangi <b>glassmorphism</b> ko‘rinishi (haqiqiy
+      CSS qiymatlari bilan). Brauzerda backdrop-blur jonli ko‘rinadi.
+    </div>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">◆</div>
+          <div><b>OnlineTalim</b><span>O‘quvchi paneli</span></div>
+        </div>
+        <nav class="nav">
+          <a class="active"><span class="dot"></span> Bosh sahifa</a>
+          <a><span class="dot"></span> Kurslarim</a>
+          <a><span class="dot"></span> Bildirishnomalar</a>
+          <a><span class="dot"></span> Tarif va to‘lov</a>
+          <a><span class="dot"></span> Profil</a>
+        </nav>
+      </aside>
+      <div class="content">
+        <div class="topbar"><h3>Bosh sahifa</h3></div>
+        <main>
+          <section class="hero">
+            <h2>Assalomu alaykum, Islombek! 👋</h2>
+            <p>Bugun ham yangi bilim olishga tayyormisiz?</p>
+            <span class="pill">📅 Tarif faol — 20.07.2026</span>
+          </section>
+
+          <section class="stats">
+            <div class="stat glass glass-hover"><div class="ico">▶</div><div class="num">24</div><div class="lbl">Tugatilgan darslar</div></div>
+            <div class="stat glass glass-hover"><div class="ico">📚</div><div class="num">3</div><div class="lbl">Faol kurslar</div></div>
+            <div class="stat glass glass-hover"><div class="ico">🏆</div><div class="num">88%</div><div class="lbl">O‘rtacha ball</div></div>
+            <div class="stat glass glass-hover"><div class="ico">⏱</div><div class="num">Faol</div><div class="lbl">Tarif holati</div></div>
+          </section>
+
+          <section class="row">
+            <div>
+              <div class="card glass" style="margin-bottom:22px">
+                <h3>Davom etayotgan kurslar</h3>
+                <div class="lesson" style="background: oklch(1 0 0 / 0.4)">
+                  <div class="thumb"></div>
+                  <div style="flex:1">
+                    <span class="badge">Frontend</span>
+                    <div style="font-family:Outfit;font-weight:600;margin-top:6px">React asoslari</div>
+                    <div class="bar"><i style="width:62%"></i></div>
+                  </div>
+                </div>
+                <div class="lesson" style="background: oklch(1 0 0 / 0.4); margin-top:10px">
+                  <div class="thumb" style="background:var(--gradient-hero)"></div>
+                  <div style="flex:1">
+                    <span class="badge">Backend</span>
+                    <div style="font-family:Outfit;font-weight:600;margin-top:6px">Node.js va API</div>
+                    <div class="bar"><i style="width:35%"></i></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card glass">
+                <h3>Video darslik (yangi tartib)</h3>
+                <div class="videoframe"><div class="inner">▶ Himoyalangan video</div></div>
+                <div style="margin-top:14px; display:flex; gap:8px; flex-wrap:wrap">
+                  <span class="badge">📘 1-modul</span>
+                  <span class="badge">Video darslik</span>
+                  <span class="badge green">✓ Yakunlangan</span>
+                </div>
+                <h3 style="margin-top:12px; font-size:20px">useState va useEffect</h3>
+              </div>
+            </div>
+
+            <div>
+              <div class="card glass" style="margin-bottom:22px">
+                <h3>Yuklanish holati (skeleton)</h3>
+                <div class="sk" style="height:120px;margin-bottom:12px"></div>
+                <div class="sk" style="height:14px;width:70%;margin-bottom:8px"></div>
+                <div class="sk" style="height:14px;width:90%;margin-bottom:8px"></div>
+                <div class="sk" style="height:14px;width:50%"></div>
+              </div>
+              <div class="card glass">
+                <h3>Kurs darslari</h3>
+                <div style="font-size:14px;line-height:2.1">
+                  <div>✓ Kirish</div>
+                  <div>✓ Komponentlar</div>
+                  <div style="color:var(--primary);font-weight:600">▶ useState va useEffect</div>
+                  <div style="opacity:.6">○ Props</div>
+                  <div style="opacity:.6">○ Yakuniy test</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

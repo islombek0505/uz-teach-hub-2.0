@@ -7,11 +7,37 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { seo, SITE_NAME, SITE_URL, DEFAULT_DESCRIPTION, OG_IMAGE } from "@/lib/seo";
+
+// Organisation + website structured data (JSON-LD) for rich search results.
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "EducationalOrganization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: OG_IMAGE,
+      image: OG_IMAGE,
+      description: DEFAULT_DESCRIPTION,
+      sameAs: [],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: DEFAULT_DESCRIPTION,
+      inLanguage: "uz",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
+};
 
 function NotFoundComponent() {
   return (
@@ -38,9 +64,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -74,36 +97,41 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Uz Teach Hub" },
-      { name: "description", content: "Online dasturlash kurslarini o'rganing" },
-      { name: "author", content: "Uz Teach Hub" },
-      { property: "og:title", content: "Uz Teach Hub" },
-      { property: "og:description", content: "Online dasturlash kurslarini o'rganing" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@UzTeachHub" },
-      { name: "twitter:title", content: "Uz Teach Hub" },
-      { name: "twitter:description", content: "Online dasturlash kurslarini o'rganing" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/J9yTuJnYCEcqL1ad9m4MoUaW1fS2/social-images/social-1781008314434-hd-nature-trees-and-road-3dxyx41d7e52a4k0.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/J9yTuJnYCEcqL1ad9m4MoUaW1fS2/social-images/social-1781008314434-hd-nature-trees-and-road-3dxyx41d7e52a4k0.webp" },
-    ],
-    links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap",
-      },
-    ],
-  }),
+  head: () => {
+    const base = seo();
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        { name: "author", content: SITE_NAME },
+        { name: "theme-color", content: "#0f2733" },
+        { name: "application-name", content: SITE_NAME },
+        { name: "apple-mobile-web-app-title", content: SITE_NAME },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "format-detection", content: "telephone=no" },
+        ...base.meta,
+      ],
+      links: [
+        ...base.links,
+        { rel: "stylesheet", href: appCss },
+        { rel: "icon", href: "/favicon.ico", sizes: "any" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+        { rel: "manifest", href: "/site.webmanifest" },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap",
+        },
+      ],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(STRUCTURED_DATA),
+        },
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -112,7 +140,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="uz">
       <head>
         <HeadContent />
       </head>

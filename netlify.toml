@@ -9,3 +9,59 @@
 [dev]
   command = "npm run dev"
   port = 8080
+
+# ---------------------------------------------------------------------------
+# Security headers (applied to every response). These merge with the Nitro-
+# generated `dist/_headers` (which sets immutable caching on /assets/*).
+#
+# NOTE: the Content-Security-Policy below is tuned to exactly the origins this
+# app talks to (Supabase, Bunny Stream, Google Fonts). If you add a new third-
+# party (analytics, a new CDN, etc.) you must add its origin here too. If a
+# legitimate resource is ever blocked after a deploy, temporarily switch the
+# header name to `Content-Security-Policy-Report-Only` to diagnose, then fix
+# the directive — don't remove CSP entirely.
+# ---------------------------------------------------------------------------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Clickjacking protection
+    X-Frame-Options = "DENY"
+    # Stop MIME-type sniffing
+    X-Content-Type-Options = "nosniff"
+    # Don't leak full URLs to other origins
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Lock down powerful browser features the app doesn't use
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), browsing-topics=(), interest-cohort=(), payment=()"
+    # Force HTTPS for 2 years (only sent over HTTPS by Netlify)
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-DNS-Prefetch-Control = "on"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.bunnycdn.com https://*.b-cdn.net; frame-src https://iframe.mediadelivery.net; worker-src 'self' blob:; manifest-src 'self'"
+
+# Long-cache the immutable, content-hashed build assets (belt-and-braces with
+# Nitro's own _headers).
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Static brand assets — cache a week, allow revalidation.
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/og-image.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+# Never cache the SEO text files so updates show up immediately.
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/sitemap.xml"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
+import { seo } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -21,14 +22,14 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "LearnHub — Online Kurslar Platformasi" },
-      { name: "description", content: "Professional online kurslar. Video darslar, testlar, sertifikatlar. Oylik obuna asosida." },
-      { property: "og:title", content: "LearnHub — Online Kurslar Platformasi" },
-      { property: "og:description", content: "Professional online kurslar. Video darslar, testlar, sertifikatlar." },
-    ],
-  }),
+  head: () =>
+    seo({
+      // Home page targets the brand + primary keywords for ranking.
+      title: undefined, // uses the full default title
+      description:
+        "OnlineTalim — professional onlayn kurslar platformasi. Video darslar, interaktiv testlar va sertifikatlar. Oylik obuna asosida istalgan vaqtda o‘rganing.",
+      path: "/",
+    }),
   component: Index,
 });
 
@@ -42,7 +43,7 @@ function Index() {
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <span className="font-display text-xl font-bold">LearnHub</span>
+            <span className="font-display text-xl font-bold">OnlineTalim</span>
           </Link>
           <nav className="hidden items-center gap-8 md:flex">
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">Imkoniyatlar</a>
@@ -92,7 +93,7 @@ function Index() {
       {/* Features */}
       <section id="features" className="container mx-auto px-4 py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-4xl font-bold tracking-tight">Nima uchun LearnHub?</h2>
+          <h2 className="font-display text-4xl font-bold tracking-tight">Nima uchun OnlineTalim?</h2>
           <p className="mt-4 text-lg text-muted-foreground">Bilim olishning eng qulay va samarali yo'li</p>
         </div>
         <div className="mt-16 grid gap-6 md:grid-cols-3">
@@ -191,7 +192,7 @@ function Index() {
                 },
                 {
                   q: "Qanday qurilmalarda ishlaydi?",
-                  a: "LearnHub telefon, planshet va kompyuterda — istalgan zamonaviy brauzerda muammosiz ishlaydi.",
+                  a: "OnlineTalim telefon, planshet va kompyuterda — istalgan zamonaviy brauzerda muammosiz ishlaydi.",
                 },
               ].map((item, i) => (
                 <AccordionItem
@@ -214,7 +215,7 @@ function Index() {
 
       <footer className="border-t bg-background py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © 2026 LearnHub. Barcha huquqlar himoyalangan.
+          © 2026 OnlineTalim. Barcha huquqlar himoyalangan.
         </div>
       </footer>
     </div>

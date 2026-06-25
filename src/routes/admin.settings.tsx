@@ -94,7 +94,7 @@ function PlatformTab() {
       <CardHeader><CardTitle className="font-display">Asosiy ma'lumotlar</CardTitle></CardHeader>
       <CardContent>
         <form onSubmit={(e) => { e.preventDefault(); save.mutate(form); }} className="space-y-4">
-          <div className="space-y-2"><Label>Platforma nomi</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="LearnHub" /></div>
+          <div className="space-y-2"><Label>Platforma nomi</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="OnlineTalim" /></div>
           <div className="space-y-2"><Label>Shior / Tagline</Label><Input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="Online ta'lim platformasi" /></div>
           <Button type="submit" disabled={save.isPending}>{save.isPending ? "Saqlanmoqda..." : "Saqlash"}</Button>
         </form>

@@ -2,9 +2,11 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin-sidebar";
 import { AuthGate } from "@/components/auth-gate";
+import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
+  head: () => seo({ title: "Admin panel", noindex: true }),
 });
 
 function AdminLayout() {

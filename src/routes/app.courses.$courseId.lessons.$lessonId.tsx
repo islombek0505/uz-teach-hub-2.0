@@ -11,8 +11,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,6 +21,9 @@ import {
   Paperclip,
   Eye,
   Presentation,
+  XCircle,
+  Trophy,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,7 +32,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { getLessonPlayback } from "@/lib/bunny.functions";
 import { getQuizQuestions, submitQuizAttempt } from "@/lib/quiz.functions";
-import { PresentationSlidesViewer } from "@/components/presentation-viewer";
+import { PresentationSlidesViewer, HtmlPresentationViewer } from "@/components/presentation-viewer";
+import { LessonPlayerSkeleton } from "@/components/student/loaders";
+import { BookOpen, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/app/courses/$courseId/lessons/$lessonId")({
   component: LessonPlayer,
@@ -57,7 +60,7 @@ function LessonPlayer() {
       const { data: course, error } = await supabase
         .from("courses")
         .select(
-          "id, title, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_slides))",
+          "id, title, modules(id, title, position, lessons(id, title, type, position, has_quiz, pass_threshold, description, content, presentation_slides, presentation_html_path))",
         )
         .eq("id", courseId)
         .maybeSingle();
@@ -137,8 +140,7 @@ function LessonPlayer() {
     setCorrections({});
   }, [lessonId]);
 
-  if (isLoading || !data)
-    return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
+  if (isLoading || !data) return <LessonPlayerSkeleton />;
   const { course, allLessons, lesson, completedSet, lastAttempt, materials } = data;
   const idx = allLessons.findIndex((l: any) => l.id === lessonId);
   const prev = idx > 0 ? allLessons[idx - 1] : null;
@@ -199,55 +201,86 @@ function LessonPlayer() {
   const watermark = playback?.watermark ? maskPhone(playback.watermark) : "";
   const lessonDone = completedSet.has(lesson.id);
 
+  const hasLessonBody =
+    lesson.content ||
+    lesson.presentation_html_path ||
+    (Array.isArray(lesson.presentation_slides) && lesson.presentation_slides.length > 0);
+  const typeLabel =
+    lesson.type === "video"
+      ? "Video darslik"
+      : lesson.type === "presentation"
+        ? "Prezentatsiya"
+        : "Matn darslik";
+
   return (
     <>
       <Topbar title={course.title} />
-      <main className="flex-1 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 p-4 lg:p-6">
         <Link
           to="/app/courses/$courseId"
           params={{ courseId }}
-          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" /> Kursga qaytish
         </Link>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-4">
-            {lesson.type === "video" && (
-              <div className="relative aspect-video overflow-hidden rounded-xl bg-black">
-                {playback?.embedUrl ? (
-                  <iframe
-                    src={playback.embedUrl}
-                    title={lesson.title}
-                    className="absolute inset-0 h-full w-full"
-                    loading="lazy"
-                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                    allowFullScreen
-                  />
-                ) : playbackError ? (
-                  <div className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-300">
-                    Video yuklab bo'lmadi: {(playbackError as Error).message}
-                  </div>
-                ) : playbackLoading ? (
-                  <div className="absolute inset-0 grid place-items-center text-white/60">
-                    Video yuklanmoqda...
-                  </div>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="space-y-5">
+            {lesson.type === "video" ? (
+              <div className="glass relative aspect-video overflow-hidden rounded-2xl border-transparent bg-black p-1.5 shadow-lg">
+                <div className="relative h-full w-full overflow-hidden rounded-xl bg-black">
+                  {playback?.embedUrl ? (
+                    <iframe
+                      src={playback.embedUrl}
+                      title={lesson.title}
+                      className="absolute inset-0 h-full w-full"
+                      loading="lazy"
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                      allowFullScreen
+                    />
+                  ) : playbackError ? (
+                    <div className="absolute inset-0 grid place-items-center p-4 text-center text-sm text-red-300">
+                      Video yuklab bo'lmadi: {(playbackError as Error).message}
+                    </div>
+                  ) : playbackLoading ? (
+                    <div className="absolute inset-0 grid place-items-center gap-3 text-white/60">
+                      <PlayCircle className="h-10 w-10 animate-pulse" />
+                      <span className="text-sm">Video yuklanmoqda...</span>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 grid place-items-center text-white/60">
+                      Video mavjud emas
+                    </div>
+                  )}
+                  {watermark && (
+                    <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/50 px-2 py-1 text-xs text-white/80 backdrop-blur-sm">
+                      {watermark}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div
+                className="relative flex aspect-[16/6] items-center justify-center overflow-hidden rounded-2xl text-white"
+                style={{ background: "var(--gradient-hero)" }}
+              >
+                {lesson.type === "presentation" ? (
+                  <Presentation className="h-14 w-14 opacity-80" />
                 ) : (
-                  <div className="absolute inset-0 grid place-items-center text-white/60">
-                    Video mavjud emas
-                  </div>
-                )}
-                {watermark && (
-                  <div className="pointer-events-none absolute right-4 top-4 rounded-md bg-black/50 px-2 py-1 text-xs text-white/80 backdrop-blur-sm">
-                    {watermark}
-                  </div>
+                  <FileText className="h-14 w-14 opacity-80" />
                 )}
               </div>
             )}
 
-            <div>
+            {/* Lesson header — single source of truth for title + meta */}
+            <div className="glass rounded-2xl border-transparent p-5">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{lesson.moduleTitle}</Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <BookOpen className="h-3 w-3" /> {lesson.moduleTitle}
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  {typeLabel}
+                </Badge>
                 {lesson.type === "video" && (
                   <Badge variant="outline" className="gap-1">
                     <ShieldCheck className="h-3 w-3" /> Himoyalangan
@@ -259,43 +292,64 @@ function LessonPlayer() {
                   </Badge>
                 )}
               </div>
-              <h1 className="mt-2 font-display text-2xl font-bold lg:text-3xl">{lesson.title}</h1>
+              <h1 className="mt-3 font-display text-2xl font-bold leading-tight lg:text-3xl">
+                {lesson.title}
+              </h1>
               {lesson.description && (
-                <p className="mt-2 text-muted-foreground">{lesson.description}</p>
+                <p className="mt-2 leading-relaxed text-muted-foreground">{lesson.description}</p>
+              )}
+              {!lesson.has_quiz && !lessonDone && (
+                <Button onClick={markCompleted} className="mt-4">
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash
+                </Button>
+              )}
+              {lesson.has_quiz && !lessonDone && (
+                <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+                  <ListChecks className="h-4 w-4" /> Darsni yakunlash uchun test topshiring (≥
+                  {threshold}%)
+                </p>
               )}
             </div>
 
             <Tabs value={tab} onValueChange={setTab}>
-              <TabsList>
-                <TabsTrigger value="content">Tavsif</TabsTrigger>
-                {(lesson.content || lesson.type === "presentation" || lesson.type === "text") && (
-                  <TabsTrigger value="presentation">Materiallar</TabsTrigger>
-                )}
+              <TabsList className="glass border-transparent">
+                <TabsTrigger value="content">Dars</TabsTrigger>
                 {materials.length > 0 && (
                   <TabsTrigger value="files">Fayllar ({materials.length})</TabsTrigger>
                 )}
                 {lesson.has_quiz && <TabsTrigger value="quiz">Test</TabsTrigger>}
               </TabsList>
+
               <TabsContent value="content" className="mt-4">
-                <Card>
-                  <CardContent className="prose prose-sm max-w-none p-6">
-                    <p>
-                      {lesson.description ||
-                        `Bu darsda "${lesson.title}" mavzusi ko'rib chiqiladi.`}
-                    </p>
-                    <p>
-                      {lesson.has_quiz
-                        ? `Darsdan keyin test bor — kamida ${threshold}% kerak.`
-                        : "Darsni yakunlagach keyingi darsga o'ting."}
-                    </p>
-                    {!lesson.has_quiz && !lessonDone && (
-                      <Button onClick={markCompleted} className="mt-2">
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash
-                      </Button>
+                <Card className="glass border-transparent">
+                  <CardContent className="space-y-6 p-6">
+                    {lesson.content && (
+                      <div
+                        className="prose prose-sm max-w-none dark:prose-invert"
+                        dangerouslySetInnerHTML={{ __html: lesson.content }}
+                      />
                     )}
-                    {Array.isArray(lesson.presentation_slides) &&
+
+                    {lesson.presentation_html_path ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Presentation className="h-5 w-5 text-primary" />
+                          <h3 className="font-display text-lg font-semibold">
+                            Dars prezentatsiyasi
+                          </h3>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          To'liq ekran tugmasi bilan kattalashtiring.
+                        </p>
+                        <HtmlPresentationViewer
+                          path={lesson.presentation_html_path as string}
+                          title={lesson.title}
+                        />
+                      </div>
+                    ) : (
+                      Array.isArray(lesson.presentation_slides) &&
                       lesson.presentation_slides.length > 0 && (
-                        <div className="not-prose mt-6 space-y-3">
+                        <div className="space-y-3">
                           <div className="flex items-center gap-2">
                             <Presentation className="h-5 w-5 text-primary" />
                             <h3 className="font-display text-lg font-semibold">
@@ -311,33 +365,26 @@ function LessonPlayer() {
                             title={lesson.title}
                           />
                         </div>
-                      )}
+                      )
+                    )}
+
+                    {!hasLessonBody && (
+                      <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground">
+                        <BookOpen className="h-8 w-8 opacity-40" />
+                        <p className="text-sm">
+                          {lesson.type === "video"
+                            ? "Videoni tomosha qiling va darsni yakunlang."
+                            : "Bu dars uchun qo'shimcha mazmun qo'shilmagan."}
+                        </p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              {(lesson.content || lesson.type === "presentation" || lesson.type === "text") && (
-                <TabsContent value="presentation" className="mt-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      {lesson.content ? (
-                        <div
-                          className="prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: lesson.content }}
-                        />
-                      ) : (
-                        <div className="text-sm text-muted-foreground">
-                          Bu dars uchun qo'shimcha mazmun qo'shilmagan.
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              )}
-
               {materials.length > 0 && (
                 <TabsContent value="files" className="mt-4">
-                  <Card>
+                  <Card className="glass border-transparent">
                     <CardContent className="space-y-2 p-4">
                       {materials.map((m: any) => (
                         <MaterialItem key={m.id} material={m} />
@@ -349,10 +396,10 @@ function LessonPlayer() {
 
               {lesson.has_quiz && (
                 <TabsContent value="quiz" className="mt-4">
-                  <Card>
-                    <CardContent className="space-y-6 p-6">
+                  <Card className="glass border-transparent">
+                    <CardContent className="space-y-5 p-6">
                       <div className="flex items-center gap-3">
-                        <div className="grid h-12 w-12 place-items-center rounded-lg bg-primary/10 text-primary">
+                        <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary">
                           <ListChecks className="h-6 w-6" />
                         </div>
                         <div>
@@ -366,67 +413,148 @@ function LessonPlayer() {
                       </div>
 
                       {questions.length === 0 && (
-                        <div className="rounded-lg border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+                          <ListChecks className="h-8 w-8 opacity-40" />
                           Test savollari hali qo'shilmagan.
                         </div>
                       )}
 
+                      {/* Result banner */}
                       {submitted && (
                         <div
-                          className={`rounded-lg p-4 ${score >= threshold ? "bg-success/10 border border-success/30" : "bg-destructive/10 text-destructive border border-destructive/30"}`}
+                          className={`flex items-center gap-4 rounded-2xl border p-5 ${
+                            score >= threshold
+                              ? "border-success/30 bg-success/10"
+                              : "border-destructive/30 bg-destructive/10"
+                          }`}
                         >
-                          <div className="font-display text-2xl font-bold">{score}%</div>
-                          <div className="text-sm">
-                            {score >= threshold
-                              ? "Ajoyib! Keyingi darsga o'ting."
-                              : `Kamida ${threshold}% kerak.`}
+                          <div
+                            className={`grid h-16 w-16 shrink-0 place-items-center rounded-full ${
+                              score >= threshold
+                                ? "bg-success/20 text-success"
+                                : "bg-destructive/20 text-destructive"
+                            }`}
+                          >
+                            {score >= threshold ? (
+                              <Trophy className="h-8 w-8" />
+                            ) : (
+                              <RotateCcw className="h-8 w-8" />
+                            )}
                           </div>
-                        </div>
-                      )}
-                      {!submitted && lastAttempt && (
-                        <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-                          Oxirgi urinish: <strong>{lastAttempt.score}%</strong>{" "}
-                          {lastAttempt.passed ? "✅" : "❌"}
+                          <div className="min-w-0">
+                            <div className="font-display text-3xl font-bold">{score}%</div>
+                            <div
+                              className={`text-sm ${score >= threshold ? "text-success" : "text-destructive"}`}
+                            >
+                              {score >= threshold
+                                ? "Ajoyib! Test muvaffaqiyatli topshirildi."
+                                : `Yetarli emas — kamida ${threshold}% kerak. Qaytadan urinib ko'ring.`}
+                            </div>
+                          </div>
                         </div>
                       )}
 
-                      {questions.map((q: any, qi: number) => (
-                        <div key={q.id} className="space-y-3">
-                          <div className="font-medium">
-                            {qi + 1}. {q.question}
+                      {/* Live progress before submit */}
+                      {!submitted && questions.length > 0 && (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>Javob berildi</span>
+                            <span className="font-medium">
+                              {Object.keys(answers).length}/{questions.length}
+                            </span>
                           </div>
-                          <RadioGroup
-                            value={answers[q.id]?.toString()}
-                            onValueChange={(v) => setAnswers({ ...answers, [q.id]: Number(v) })}
-                            disabled={submitted}
-                          >
-                            {(q.options as string[]).map((opt: string, oi: number) => {
-                              const selected = answers[q.id] === oi;
-                              const correct = submitted && oi === corrections[q.id];
-                              const wrong = submitted && selected && oi !== corrections[q.id];
-                              return (
-                                <div
-                                  key={oi}
-                                  className={`flex items-center gap-3 rounded-lg border p-3 ${correct ? "border-success bg-success/10" : wrong ? "border-destructive bg-destructive/10" : ""}`}
-                                >
-                                  <RadioGroupItem value={oi.toString()} id={`${q.id}-${oi}`} />
-                                  <Label
-                                    htmlFor={`${q.id}-${oi}`}
-                                    className="flex-1 cursor-pointer"
-                                  >
-                                    {opt}
-                                  </Label>
-                                </div>
-                              );
-                            })}
-                          </RadioGroup>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all duration-300"
+                              style={{
+                                width: `${(Object.keys(answers).length / questions.length) * 100}%`,
+                              }}
+                            />
+                          </div>
                         </div>
-                      ))}
+                      )}
+
+                      {!submitted && lastAttempt && (
+                        <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-3 text-sm">
+                          <span className="text-muted-foreground">Oxirgi urinish:</span>
+                          <strong>{lastAttempt.score}%</strong>
+                          {lastAttempt.passed ? (
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          )}
+                        </div>
+                      )}
+
+                      {/* Questions */}
+                      <div className="space-y-4">
+                        {questions.map((q: any, qi: number) => (
+                          <div
+                            key={q.id}
+                            className="rounded-2xl border border-white/40 bg-white/40 p-4 dark:border-white/10 dark:bg-white/5"
+                          >
+                            <div className="flex gap-2.5">
+                              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+                                {qi + 1}
+                              </span>
+                              <div className="pt-0.5 font-medium">{q.question}</div>
+                            </div>
+                            <div className="mt-3 space-y-2">
+                              {(q.options as string[]).map((opt: string, oi: number) => {
+                                const selected = answers[q.id] === oi;
+                                const correct = submitted && oi === corrections[q.id];
+                                const wrong = submitted && selected && oi !== corrections[q.id];
+                                const letter = String.fromCharCode(65 + oi);
+                                return (
+                                  <button
+                                    key={oi}
+                                    type="button"
+                                    disabled={submitted}
+                                    onClick={() => setAnswers({ ...answers, [q.id]: oi })}
+                                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all ${
+                                      correct
+                                        ? "border-success bg-success/10"
+                                        : wrong
+                                          ? "border-destructive bg-destructive/10"
+                                          : selected
+                                            ? "border-primary bg-primary/10"
+                                            : "border-transparent bg-background/60 hover:border-primary/30 hover:bg-primary/5"
+                                    } ${submitted ? "cursor-default" : ""}`}
+                                  >
+                                    <span
+                                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg text-xs font-bold ${
+                                        correct
+                                          ? "bg-success text-success-foreground"
+                                          : wrong
+                                            ? "bg-destructive text-destructive-foreground"
+                                            : selected
+                                              ? "bg-primary text-primary-foreground"
+                                              : "bg-muted text-muted-foreground"
+                                      }`}
+                                    >
+                                      {letter}
+                                    </span>
+                                    <span className="flex-1">{opt}</span>
+                                    {correct && <CheckCircle2 className="h-5 w-5 text-success" />}
+                                    {wrong && <XCircle className="h-5 w-5 text-destructive" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
 
                       {questions.length > 0 && (
                         <div className="flex gap-3">
                           {!submitted ? (
-                            <Button onClick={submitQuiz} size="lg" disabled={submitting}>
+                            <Button
+                              onClick={submitQuiz}
+                              size="lg"
+                              disabled={
+                                submitting || Object.keys(answers).length < questions.length
+                              }
+                            >
                               {submitting ? "Tekshirilmoqda..." : "Testni topshirish"}
                             </Button>
                           ) : score >= threshold ? (
@@ -443,7 +571,7 @@ function LessonPlayer() {
                               size="lg"
                               variant="outline"
                             >
-                              Qaytadan urinish
+                              <RotateCcw className="mr-1 h-4 w-4" /> Qaytadan urinish
                             </Button>
                           )}
                         </div>
@@ -454,7 +582,7 @@ function LessonPlayer() {
               )}
             </Tabs>
 
-            <div className="flex items-center justify-between border-t pt-4">
+            <div className="glass flex items-center justify-between gap-3 rounded-2xl border-transparent p-3">
               <Button
                 variant="outline"
                 disabled={!prev}
@@ -469,7 +597,9 @@ function LessonPlayer() {
                 <ChevronLeft className="mr-1 h-4 w-4" /> Oldingi
               </Button>
               {lesson.has_quiz && !lessonDone ? (
-                <Button onClick={() => setTab("quiz")}>Test ishlash</Button>
+                <Button onClick={() => setTab("quiz")}>
+                  <ListChecks className="mr-1 h-4 w-4" /> Test ishlash
+                </Button>
               ) : (
                 <Button onClick={goNext} disabled={!next}>
                   Keyingi <ChevronRight className="ml-1 h-4 w-4" />
@@ -478,10 +608,12 @@ function LessonPlayer() {
             </div>
           </div>
 
-          <aside className="space-y-3">
-            <Card>
+          <aside className="lg:sticky lg:top-20 lg:self-start">
+            <Card className="glass border-transparent">
               <CardContent className="p-4">
-                <h3 className="mb-3 font-display font-semibold">Kurs darslari</h3>
+                <h3 className="mb-3 flex items-center gap-2 font-display font-semibold">
+                  <BookOpen className="h-4 w-4 text-primary" /> Kurs darslari
+                </h3>
                 <LessonSidebarAccordion
                   modules={course.modules}
                   courseId={courseId}
@@ -550,8 +682,10 @@ function MaterialItem({ material }: { material: any }) {
       {open && (
         <div className="border-t p-3" onContextMenu={(e) => e.preventDefault()}>
           {!url ? (
-            <div className="grid aspect-video place-items-center text-sm text-muted-foreground">
-              Yuklanmoqda...
+            <div className="shimmer grid aspect-video place-items-center rounded-md bg-foreground/[0.06] text-sm text-muted-foreground dark:bg-white/[0.06]">
+              <span className="inline-flex items-center gap-2">
+                <Paperclip className="h-4 w-4 animate-pulse" /> Yuklanmoqda...
+              </span>
             </div>
           ) : isImage ? (
             <img

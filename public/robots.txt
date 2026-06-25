@@ -1,0 +1,9 @@
+# OnlineTalim — robots
+User-agent: *
+Allow: /
+# Private, authenticated areas — keep out of the index
+Disallow: /app/
+Disallow: /admin/
+Disallow: /_serverFn/
+
+Sitemap: https://onlinetalim.uz/sitemap.xml

@@ -168,4 +168,263 @@
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
+
+  /* Respect users who prefer reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+/* =====================================================================
+ * Glassmorphism design layer (student panel)
+ * ---------------------------------------------------------------------
+ * `.glass` / `.glass-strong` are frosted translucent surfaces. They set
+ * background, blur, border and shadow only — radius/padding stay with
+ * Tailwind utilities so the classes compose cleanly (e.g. `glass rounded-2xl`).
+ * ===================================================================== */
+.glass {
+  background-color: oklch(1 0 0 / 0.55);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid oklch(1 0 0 / 0.55);
+  box-shadow:
+    0 8px 32px -12px oklch(0.32 0.09 240 / 0.22),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.6);
+}
+
+.glass-strong {
+  background-color: oklch(1 0 0 / 0.78);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid oklch(1 0 0 / 0.6);
+  box-shadow:
+    0 10px 40px -14px oklch(0.32 0.09 240 / 0.28),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.7);
+}
+
+.glass-hover {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.25s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 16px 48px -16px oklch(0.32 0.09 240 / 0.32),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.7);
+}
+
+.dark .glass {
+  background-color: oklch(0.24 0.05 245 / 0.5);
+  border-color: oklch(1 0 0 / 0.1);
+  box-shadow:
+    0 8px 32px -12px oklch(0 0 0 / 0.55),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.06);
+}
+.dark .glass-strong {
+  background-color: oklch(0.26 0.05 245 / 0.72);
+  border-color: oklch(1 0 0 / 0.12);
+  box-shadow:
+    0 10px 40px -14px oklch(0 0 0 / 0.6),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.08);
+}
+.dark .glass-hover:hover {
+  box-shadow:
+    0 16px 48px -16px oklch(0 0 0 / 0.7),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.1);
+}
+
+/* Layered, soft gradient backdrop the glass sits on. Applied to the student
+ * shell so the frosted surfaces have colour to refract. */
+.app-surface {
+  position: relative;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(60rem 60rem at 8% -10%, oklch(0.78 0.1 195 / 0.18), transparent 55%),
+    radial-gradient(50rem 50rem at 100% 0%, oklch(0.55 0.13 220 / 0.16), transparent 50%),
+    radial-gradient(70rem 70rem at 50% 120%, oklch(0.62 0.15 155 / 0.1), transparent 55%);
+  background-attachment: fixed;
+}
+.dark .app-surface {
+  background-image:
+    radial-gradient(60rem 60rem at 8% -10%, oklch(0.55 0.13 220 / 0.2), transparent 55%),
+    radial-gradient(50rem 50rem at 100% 0%, oklch(0.4 0.12 250 / 0.28), transparent 50%),
+    radial-gradient(70rem 70rem at 50% 120%, oklch(0.5 0.12 195 / 0.14), transparent 55%);
+}
+
+/* Entrance + loading animations for a smooth, no-jank feel. */
+@keyframes fade-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-rise {
+  animation: fade-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(1 0 0 / 0.35),
+    transparent
+  );
+  animation: shimmer 1.6s infinite;
+}
+.dark .shimmer::after {
+  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.06), transparent);
+}
+
+/* =====================================================================
+ * Auth screens (login / register) — immersive glassmorphism
+ * ===================================================================== */
+
+/* Full-bleed, animated ocean backdrop the auth card floats on. */
+.auth-bg {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(40rem 40rem at 12% 18%, oklch(0.55 0.13 220 / 0.55), transparent 45%),
+    radial-gradient(36rem 36rem at 88% 12%, oklch(0.78 0.1 195 / 0.45), transparent 50%),
+    radial-gradient(44rem 44rem at 50% 108%, oklch(0.62 0.15 155 / 0.35), transparent 55%),
+    var(--gradient-hero);
+}
+/* faint dotted grid for depth */
+.auth-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(oklch(1 0 0 / 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(circle at 50% 40%, black, transparent 75%);
+}
+
+/* Soft drifting colour orbs (decorative; respect reduced-motion). */
+.auth-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes float-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(18px, -34px, 0) scale(1.08); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-24px, 26px, 0) scale(1.1); }
+}
+.animate-float-a { animation: float-a 11s ease-in-out infinite; }
+.animate-float-b { animation: float-b 14s ease-in-out infinite; }
+
+/* Frosted form fields tuned for a LIGHT glass card (subtle dark border so they
+ * read on a bright frosted surface; light border in dark mode). */
+.glass-field {
+  background-color: oklch(1 0 0 / 0.5);
+  border: 1px solid oklch(0.3 0.06 245 / 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.glass-field:focus,
+.glass-field:focus-visible {
+  outline: none;
+  background-color: oklch(1 0 0 / 0.85);
+  border-color: oklch(0.55 0.13 220 / 0.65);
+  box-shadow: 0 0 0 4px oklch(0.55 0.13 220 / 0.14);
+}
+.dark .glass-field {
+  background-color: oklch(1 0 0 / 0.06);
+  border-color: oklch(1 0 0 / 0.14);
+}
+.dark .glass-field:focus,
+.dark .glass-field:focus-visible {
+  background-color: oklch(1 0 0 / 0.1);
+  border-color: oklch(0.7 0.12 195 / 0.6);
+  box-shadow: 0 0 0 4px oklch(0.55 0.13 220 / 0.18);
+}
+
+/* Premium gradient CTA. */
+.btn-gradient {
+  background: var(--gradient-primary);
+  color: oklch(0.98 0.01 240);
+  box-shadow: 0 10px 24px -10px oklch(0.32 0.09 240 / 0.55);
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+.btn-gradient:hover {
+  filter: brightness(1.08) saturate(1.05);
+}
+.btn-gradient:active {
+  transform: translateY(1px) scale(0.995);
+}
+.btn-gradient:disabled {
+  filter: grayscale(0.2) brightness(0.95);
+  opacity: 0.7;
+}
+
+/* =====================================================================
+ * Student sidebar — interactive polish
+ * ===================================================================== */
+
+/* Active nav item: cyan-tinted gradient wash + inner ring. */
+.sidebar-nav-active {
+  background: linear-gradient(
+    90deg,
+    oklch(0.7 0.12 195 / 0.22),
+    oklch(0.7 0.12 195 / 0.04)
+  );
+  box-shadow: inset 0 0 0 1px oklch(0.7 0.12 195 / 0.25);
+}
+
+/* Soft radial glow behind the sidebar logo / top. */
+.sidebar-glow::before {
+  content: "";
+  position: absolute;
+  inset: -40% 0 auto 0;
+  height: 180px;
+  background: radial-gradient(60% 100% at 50% 0%, oklch(0.7 0.12 195 / 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+/* Gentle pulse for the logo ring + live badges. */
+@keyframes soft-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.06); }
+}
+.animate-soft-pulse {
+  animation: soft-pulse 2.6s ease-in-out infinite;
+}
+
+/* Live notification dot ping. */
+@keyframes badge-ping {
+  0% { transform: scale(1); opacity: 0.6; }
+  75%, 100% { transform: scale(2.1); opacity: 0; }
+}
+.animate-badge-ping {
+  animation: badge-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
 }

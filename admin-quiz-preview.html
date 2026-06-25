@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OnlineTalim — Admin lesson editor + test preview</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --fg: oklch(0.18 0.04 250);
+        --muted: oklch(0.5 0.03 240);
+        --primary: oklch(0.32 0.09 240);
+        --primary-fg: oklch(0.98 0.01 240);
+        --success: oklch(0.62 0.15 155);
+        --destructive: oklch(0.6 0.22 25);
+        --border: oklch(0.9 0.015 230);
+        --card: oklch(1 0 0);
+        --accent: oklch(0.78 0.1 195);
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: "Figtree", system-ui, sans-serif; color: var(--fg);
+        background: radial-gradient(40rem 30rem at 100% 0%, oklch(0.78 0.1 195 / .1), transparent 60%), oklch(0.985 0.005 240);
+        padding: 28px; }
+      h1,h2,h3 { font-family: "Outfit"; letter-spacing: -.02em; }
+      .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px; }
+      .label { font-size: 12px; font-weight: 600; color: var(--muted); }
+      .tag { display:inline-block; font-size: 11px; padding: 2px 9px; border-radius: 7px; background: oklch(0.32 0.09 240 / .1); color: var(--primary); margin-bottom: 8px; }
+
+      .dialog { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px -28px oklch(0.2 0.06 245 / .4); }
+      .dhead { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--border); font-family: "Outfit"; font-weight: 600; }
+      .tabs { display: flex; gap: 4px; padding: 8px 20px 0; border-bottom: 1px solid var(--border); }
+      .tab { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 500; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+      .tab.active { background: oklch(0.95 0.015 230); color: var(--fg); }
+      .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+      .body { padding: 22px 20px; }
+
+      .qhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; background: oklch(0.97 0.01 235); margin-bottom: 16px; }
+      .qhead .l { display: flex; align-items: center; gap: 12px; }
+      .qhead .ic { width: 40px; height: 40px; border-radius: 10px; background: oklch(0.32 0.09 240 / .1); color: var(--primary); display: grid; place-items: center; }
+      .thr { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+      .thr input { width: 70px; height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font-size: 14px; }
+
+      .qcard { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px -4px oklch(0.3 0.09 240 / .12); }
+      .qcard .top { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: oklch(0.97 0.01 235); border-bottom: 1px solid var(--border); }
+      .qnum { width: 28px; height: 28px; border-radius: 8px; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+      .qcard .inner { padding: 14px; }
+      .qtext { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-family: "Figtree"; font-weight: 500; font-size: 14px; resize: none; }
+      .opt { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+      .radio { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; color: transparent; flex-shrink: 0; }
+      .radio.on { border-color: var(--success); background: var(--success); color: #fff; }
+      .opt input { flex: 1; height: 38px; border: 1px solid var(--border); border-radius: 8px; padding: 0 10px; font-size: 14px; }
+      .opt input.correct { border-color: oklch(0.62 0.15 155 / .4); background: oklch(0.62 0.15 155 / .05); }
+      .addopt { color: var(--primary); font-size: 13px; font-weight: 500; background: none; border: none; cursor: pointer; margin-top: 8px; padding: 4px; }
+      .addq { width: 100%; border: 1px dashed var(--border); border-radius: 12px; padding: 12px; background: none; color: var(--fg); font-weight: 500; cursor: pointer; font-size: 14px; }
+      .savebar { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+      .btn { background: var(--primary); color: #fff; border: none; border-radius: 9px; padding: 10px 18px; font-weight: 600; font-size: 14px; font-family: "Figtree"; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+      .dirty { font-size: 12px; color: oklch(0.75 0.16 75); }
+
+      /* student glass */
+      .stu { position: relative; border-radius: 18px; padding: 22px;
+        background: radial-gradient(40rem 30rem at 0% 0%, oklch(0.78 0.1 195 / .14), transparent 55%), oklch(0.15 0.04 245); }
+      .glass { background: oklch(1 0 0 / .75); backdrop-filter: blur(16px); border: 1px solid oklch(1 0 0 / .6); border-radius: 18px; padding: 20px; box-shadow: 0 10px 40px -14px oklch(0.32 0.09 240 / .3); }
+      .qbox { border: 1px solid oklch(1 0 0 / .5); background: oklch(1 0 0 / .5); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+      .sopt { display: flex; align-items: center; gap: 12px; border: 1px solid transparent; border-radius: 12px; padding: 12px; margin-top: 8px; background: oklch(1 0 0 / .6); cursor: pointer; }
+      .sopt.sel { border-color: var(--primary); background: oklch(0.32 0.09 240 / .1); }
+      .sopt.correct { border-color: var(--success); background: oklch(0.62 0.15 155 / .12); }
+      .sopt.wrong { border-color: var(--destructive); background: oklch(0.6 0.22 25 / .12); }
+      .letter { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: oklch(0.9 0.015 230); color: var(--muted); flex-shrink: 0; }
+      .letter.sel { background: var(--primary); color: #fff; }
+      .letter.correct { background: var(--success); color: #fff; }
+      .letter.wrong { background: var(--destructive); color: #fff; }
+      .result { display: flex; align-items: center; gap: 16px; border: 1px solid oklch(0.62 0.15 155 / .3); background: oklch(0.62 0.15 155 / .1); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+      .result .circle { width: 60px; height: 60px; border-radius: 50%; background: oklch(0.62 0.15 155 / .2); color: var(--success); display: grid; place-items: center; font-size: 26px; }
+      .ico { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div>
+        <span class="tag">ADMIN · DARS TAHRIRLASH (yangi, tartibli)</span>
+        <div class="label">Endi hammasi tablarga ajratilgan: Asosiy · Mazmun · Materiallar · Test</div>
+      </div>
+
+      <div class="dialog">
+        <div class="dhead">✏️ Darsni tahrirlash</div>
+        <div class="tabs">
+          <div class="tab">ℹ️ Asosiy</div>
+          <div class="tab">📄 Mazmun</div>
+          <div class="tab">📎 Materiallar</div>
+          <div class="tab active">✓ Test <span class="dot"></span></div>
+        </div>
+        <div class="body">
+          <div class="qhead">
+            <div class="l">
+              <div class="ic"><svg class="ico" style="width:20px;height:20px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+              <div><div style="font-family:Outfit;font-weight:600">Dars yakunidagi test</div><div style="font-size:12px;color:var(--muted)">2 ta savol</div></div>
+            </div>
+            <div class="thr"><span>O'tish bali</span><input value="80" /> %</div>
+          </div>
+
+          <div class="qcard">
+            <div class="top"><span class="qnum">1</span><span style="font-size:14px;color:var(--muted);font-weight:500">savol</span>
+              <span style="margin-left:auto;display:flex;gap:4px;color:var(--muted)">↑ ↓ 🗑</span></div>
+            <div class="inner">
+              <textarea class="qtext" rows="2">React komponenti nima qaytaradi?</textarea>
+              <div style="font-size:12px;color:var(--muted);margin:10px 0 4px">✓ To'g'ri javobni belgilang</div>
+              <div class="opt"><div class="radio on"><svg class="ico" style="width:14px;height:14px"><path d="M20 6L9 17l-5-5"/></svg></div><input class="correct" value="JSX (UI elementi)" /> 🗑</div>
+              <div class="opt"><div class="radio"></div><input value="Faqat matn" /> 🗑</div>
+              <div class="opt"><div class="radio"></div><input value="Ma'lumotlar bazasi" /> 🗑</div>
+              <button class="addopt">+ Variant qo'shish</button>
+            </div>
+          </div>
+
+          <div class="qcard">
+            <div class="top"><span class="qnum">2</span><span style="font-size:14px;color:var(--muted);font-weight:500">savol</span>
+              <span style="margin-left:auto;display:flex;gap:4px;color:var(--muted)">↑ ↓ 🗑</span></div>
+            <div class="inner">
+              <textarea class="qtext" rows="2">useState qaysi hookga kiradi?</textarea>
+              <div style="font-size:12px;color:var(--muted);margin:10px 0 4px">✓ To'g'ri javobni belgilang</div>
+              <div class="opt"><div class="radio on"><svg class="ico" style="width:14px;height:14px"><path d="M20 6L9 17l-5-5"/></svg></div><input class="correct" value="State hook" /> 🗑</div>
+              <div class="opt"><div class="radio"></div><input value="Effect hook" /> 🗑</div>
+            </div>
+          </div>
+
+          <button class="addq">+ Savol qo'shish</button>
+
+          <div class="savebar">
+            <span class="dirty">⠿ Saqlanmagan o'zgarishlar</span>
+            <button class="btn"><svg class="ico"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Testni saqlash</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <span class="tag">STUDENT · TEST ISHLASH (glassmorphism)</span>
+        <div class="label">O'quvchi paneliga mos: harf chiplari, jonli progress, natija banneri</div>
+      </div>
+
+      <div class="stu">
+        <div class="glass">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div style="width:48px;height:48px;border-radius:12px;background:oklch(0.32 0.09 240 / .1);color:var(--primary);display:grid;place-items:center"><svg class="ico" style="width:22px;height:22px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <div><div style="font-family:Outfit;font-weight:600;font-size:18px">Dars yakunidagi test</div><div style="font-size:13px;color:var(--muted)">Keyingi darsga o'tish uchun 80%+ ball to'plang</div></div>
+          </div>
+
+          <div class="result">
+            <div class="circle">🏆</div>
+            <div><div style="font-family:Outfit;font-size:30px;font-weight:700">100%</div><div style="font-size:13px;color:var(--success)">Ajoyib! Test muvaffaqiyatli topshirildi.</div></div>
+          </div>
+
+          <div class="qbox">
+            <div style="display:flex;gap:10px"><span style="width:24px;height:24px;border-radius:8px;background:oklch(0.32 0.09 240 / .1);color:var(--primary);display:grid;place-items:center;font-weight:700;font-size:12px;flex-shrink:0">1</span><div style="font-weight:500">React komponenti nima qaytaradi?</div></div>
+            <div class="sopt correct"><span class="letter correct">A</span><span style="flex:1">JSX (UI elementi)</span><svg class="ico" style="color:var(--success)"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></div>
+            <div class="sopt"><span class="letter">B</span><span style="flex:1">Faqat matn</span></div>
+            <div class="sopt"><span class="letter">C</span><span style="flex:1">Ma'lumotlar bazasi</span></div>
+          </div>
+
+          <button class="btn" style="margin-top:6px">Keyingi darsga o'tish →</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

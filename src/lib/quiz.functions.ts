@@ -5,10 +5,11 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DbClient = SupabaseClient<Database>;
 
-// SECURITY: Quiz questions are served WITHOUT `correct_index`, and grading
-// happens on the server. The browser never receives the answer key before
-// submitting, so a student cannot read the correct answers from devtools or
-// fake a passing score by calling the DB directly.
+// SECURITY: Quiz questions (and especially `correct_index`) are NOT readable by
+// students through RLS — only admins and the service role can read them. These
+// server functions verify course access, then read questions with the
+// service-role client and grade on the server. The answer key never reaches the
+// browser before submission, and a passing score can't be forged.
 
 export type QuizQuestionPublic = {
   id: string;
@@ -17,12 +18,13 @@ export type QuizQuestionPublic = {
   position: number;
 };
 
+/** Loads the lesson via the admin client and asserts the user has access. */
 async function loadLessonWithAccess(
-  supabase: DbClient,
+  admin: DbClient,
   userId: string,
   lessonId: string,
 ): Promise<{ id: string; course_id: string; pass_threshold: number }> {
-  const { data: lesson, error } = await supabase
+  const { data: lesson, error } = await admin
     .from("lessons")
     .select("id, course_id, pass_threshold")
     .eq("id", lessonId)
@@ -30,7 +32,7 @@ async function loadLessonWithAccess(
   if (error) throw error;
   if (!lesson) throw new Error("Dars topilmadi");
 
-  const { data: access } = await supabase.rpc("has_course_access", {
+  const { data: access } = await admin.rpc("has_course_access", {
     _user_id: userId,
     _course_id: lesson.course_id,
   });
@@ -43,10 +45,10 @@ export const getQuizQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { lessonId: string }) => d)
   .handler(async ({ data, context }): Promise<QuizQuestionPublic[]> => {
-    const { supabase, userId } = context;
-    await loadLessonWithAccess(supabase, userId, data.lessonId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await loadLessonWithAccess(supabaseAdmin, context.userId, data.lessonId);
 
-    const { data: qs, error } = await supabase
+    const { data: qs, error } = await supabaseAdmin
       .from("quiz_questions")
       .select("id, question, options, position")
       .eq("lesson_id", data.lessonId)
@@ -75,11 +77,12 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { lessonId: string; answers: Record<string, number> }) => d)
   .handler(async ({ data, context }): Promise<QuizResult> => {
-    const { supabase, userId } = context;
-    const lesson = await loadLessonWithAccess(supabase, userId, data.lessonId);
+    const { userId, supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const lesson = await loadLessonWithAccess(supabaseAdmin, userId, data.lessonId);
     const threshold = lesson.pass_threshold ?? 80;
 
-    const { data: qs, error } = await supabase
+    const { data: qs, error } = await supabaseAdmin
       .from("quiz_questions")
       .select("id, correct_index")
       .eq("lesson_id", data.lessonId);
@@ -98,6 +101,8 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
     const score = Math.round((correct / questions.length) * 100);
     const passed = score >= threshold;
 
+    // Writes go through the user-scoped client so RLS still enforces
+    // user_id = auth.uid() on the attempt and progress rows.
     const { error: attemptErr } = await supabase.from("quiz_attempts").insert({
       user_id: userId,
       lesson_id: data.lessonId,
