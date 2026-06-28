@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ChevronLeft,
@@ -184,7 +185,6 @@ export function HtmlPresentationViewer({
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -214,68 +214,97 @@ export function HtmlPresentationViewer({
     };
   }, [path, bucket]);
 
+  // Fullscreen is a CSS overlay (rendered through a portal below), NOT the
+  // native Fullscreen API. iOS Safari doesn't implement
+  // `Element.requestFullscreen`, so the previous native call was a silent no-op
+  // on iPhones — that's why the button "did nothing on some devices". A CSS
+  // overlay behaves identically on iOS, Android and desktop. While it's open we
+  // lock background scrolling and let Escape close it.
   useEffect(() => {
-    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onChange);
-    return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+    if (!isFullscreen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isFullscreen]);
 
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) document.exitFullscreen?.();
-    else wrapRef.current?.requestFullscreen?.();
-  };
+  const header = (
+    <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <PresentationIcon className="h-4 w-4 flex-shrink-0 text-primary" />
+        <span className="truncate font-medium">{title ?? "Prezentatsiya"}</span>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsFullscreen((v) => !v)}
+        className="h-7 flex-shrink-0 gap-1 text-xs"
+      >
+        {isFullscreen ? (
+          <>
+            <Minimize2 className="h-3.5 w-3.5" /> Chiqish
+          </>
+        ) : (
+          <>
+            <Maximize2 className="h-3.5 w-3.5" /> To'liq ekran
+          </>
+        )}
+      </Button>
+    </div>
+  );
+
+  const body = error ? (
+    <div className="grid aspect-video place-items-center p-4 text-center text-sm text-destructive">
+      {error}
+    </div>
+  ) : html === null ? (
+    <div className="grid aspect-video place-items-center text-sm text-muted-foreground">
+      Yuklanmoqda...
+    </div>
+  ) : (
+    <iframe
+      srcDoc={html}
+      title={title ?? "Prezentatsiya"}
+      className={
+        isFullscreen
+          ? "w-full flex-1 bg-white"
+          : // Phones: a tall box so slides have room (16:9 would be far too
+            // short). Tablets/desktop: classic 16:9. `dvh` (not `vh`) so the
+            // mobile browser bar never clips the bottom of the deck.
+            "h-[78dvh] min-h-[460px] w-full bg-white sm:aspect-video sm:h-auto sm:max-h-none sm:min-h-0"
+      }
+      sandbox="allow-scripts"
+      referrerPolicy="no-referrer"
+      allow="fullscreen"
+    />
+  );
+
+  // Fullscreen renders through a portal on <body>. The viewer normally lives
+  // inside a `.glass` card whose `backdrop-filter` establishes a containing
+  // block — that would trap a `position: fixed` overlay inside the card instead
+  // of covering the screen. Portalling to <body> escapes it. `100dvh` tracks the
+  // *visible* viewport, so nothing hides behind the mobile browser chrome.
+  if (isFullscreen && typeof document !== "undefined") {
+    return createPortal(
+      <div className="fixed left-0 right-0 top-0 z-[100] flex h-[100dvh] flex-col bg-card">
+        {header}
+        {body}
+      </div>,
+      document.body,
+    );
+  }
 
   return (
-    <div
-      ref={wrapRef}
-      className={`overflow-hidden rounded-lg border bg-card ${isFullscreen ? "fixed inset-0 z-50 rounded-none" : ""} ${className ?? ""}`}
-    >
-      <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2 text-sm">
-          <PresentationIcon className="h-4 w-4 flex-shrink-0 text-primary" />
-          <span className="truncate font-medium">{title ?? "Prezentatsiya"}</span>
-        </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={toggleFullscreen}
-          className="h-7 gap-1 text-xs"
-        >
-          {isFullscreen ? (
-            <>
-              <Minimize2 className="h-3.5 w-3.5" /> Chiqish
-            </>
-          ) : (
-            <>
-              <Maximize2 className="h-3.5 w-3.5" /> To'liq ekran
-            </>
-          )}
-        </Button>
-      </div>
-      {error ? (
-        <div className="grid aspect-video place-items-center p-4 text-center text-sm text-destructive">
-          {error}
-        </div>
-      ) : html === null ? (
-        <div className="grid aspect-video place-items-center text-sm text-muted-foreground">
-          Yuklanmoqda...
-        </div>
-      ) : (
-        <iframe
-          srcDoc={html}
-          title={title ?? "Prezentatsiya"}
-          className={
-            isFullscreen
-              ? "h-[calc(100vh-41px)] w-full bg-white"
-              : // Phones: a tall box so slides have room (16:9 would be far too
-                // short). Tablets/desktop: classic 16:9. Fullscreen for the full view.
-                "h-[78vh] min-h-[460px] w-full bg-white sm:aspect-video sm:h-auto sm:max-h-none sm:min-h-0"
-          }
-          sandbox="allow-scripts"
-          referrerPolicy="no-referrer"
-        />
-      )}
+    <div className={`flex flex-col overflow-hidden rounded-lg border bg-card ${className ?? ""}`}>
+      {header}
+      {body}
     </div>
   );
 }
