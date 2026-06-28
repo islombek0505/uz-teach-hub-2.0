@@ -71,18 +71,18 @@ function CoursesList() {
       <Topbar title="Kurslar" />
       <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <PageHeader
-          icon={GraduationCap}
+          // icon={GraduationCap}
           title="Kurslar"
           subtitle={
             enrolledCount > 0
               ? "Faol tarifingiz bilan barcha kurslarni o'rganishingiz mumkin"
-              : "Barcha kurslar — to'liq kirish uchun tarif oling"
+              : "Barcha kurslar - to'liq kirish uchun tarif oling"
           }
           action={
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Kurs qidirish..."
+                placeholder="Qidirish..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="rounded-full pl-9"

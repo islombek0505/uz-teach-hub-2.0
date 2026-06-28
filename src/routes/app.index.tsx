@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,7 @@ import {
   Crown,
   Target,
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/lib/auth";
+import { getStudentDashboard } from "@/lib/student-dashboard.functions";
 import { NewsCarousel } from "@/components/news-carousel";
 import { DashboardSkeleton } from "@/components/student/loaders";
 
@@ -30,86 +30,22 @@ export const Route = createFileRoute("/app/")({
 });
 
 function Dashboard() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
-  const [subs, setSubs] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [progress, setProgress] = useState<any[]>([]);
-  const [avgScore, setAvgScore] = useState<number | null>(null);
-  const [recent, setRecent] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // One authenticated server round-trip (see student-dashboard.functions.ts)
+  // replaces the old client-side waterfall of ~8 sequential Supabase calls.
+  const fetchDashboard = useServerFn(getStudentDashboard);
+  const { data, isLoading } = useQuery({
+    queryKey: ["student", "dashboard"],
+    queryFn: () => fetchDashboard(),
+  });
 
-  useEffect(() => {
-    if (!user) return;
-    setLoading(true);
-    (async () => {
-      try {
-      const [{ data: prof }, { data: planRow }, { data: prog }, { data: attempts }, { data: rec }] =
-        await Promise.all([
-          supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-          supabase
-            .from("user_plan")
-            .select("expires_at, is_trial, plans(title, duration_days)")
-            .eq("user_id", user.id)
-            .maybeSingle(),
-          supabase.from("lesson_progress").select("*").eq("user_id", user.id).eq("completed", true),
-          supabase.from("quiz_attempts").select("score").eq("user_id", user.id),
-          supabase
-            .from("lesson_progress")
-            .select("lesson_id, updated_at, lessons(title, type)")
-            .eq("user_id", user.id)
-            .eq("completed", true)
-            .order("updated_at", { ascending: false })
-            .limit(6),
-        ]);
-      setProfile(prof);
-      const active = planRow && (!planRow.expires_at || new Date(planRow.expires_at) > new Date());
-      setSubs(active ? [planRow] : []);
-      setProgress(prog ?? []);
-      setRecent(rec ?? []);
-      const recentLessonIds = (prog ?? []).slice(0, 50).map((p: any) => p.lesson_id);
-      if (recentLessonIds.length) {
-        const { data: ls } = await supabase
-          .from("lessons")
-          .select("module_id, modules(course_id)")
-          .in("id", recentLessonIds);
-        const cIds = Array.from(
-          new Set(((ls ?? []) as any[]).map((l: any) => l.modules?.course_id).filter(Boolean)),
-        );
-        if (cIds.length) {
-          const { data: cs } = await supabase
-            .from("courses")
-            .select("*, modules(*, lessons(id))")
-            .in("id", cIds);
-          const list = cs ?? [];
-          await Promise.all(
-            list.map(async (c: any) => {
-              if (c.cover_url && !c.cover_url.startsWith("http")) {
-                const { data: s } = await supabase.storage
-                  .from("course-covers")
-                  .createSignedUrl(c.cover_url, 60 * 60);
-                c.cover_url = s?.signedUrl ?? null;
-              }
-            }),
-          );
-          setCourses(list);
-        }
-      }
-      if (attempts && attempts.length) {
-        setAvgScore(
-          Math.round(
-            attempts.reduce((s: number, a: any) => s + (a.score || 0), 0) / attempts.length,
-          ),
-        );
-      }
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [user?.id]);
+  const profile = data?.profile ?? null;
+  const activeSub = data?.activeSub ?? null;
+  const courses = data?.courses ?? [];
+  const progress = data?.progress ?? [];
+  const recent = data?.recent ?? [];
+  const avgScore = data?.avgScore ?? null;
 
   const firstName = (profile?.full_name || "Foydalanuvchi").split(" ")[0];
-  const activeSub = subs[0];
 
   // Overall completion across the user's active courses.
   let totalLessons = 0;
@@ -167,7 +103,7 @@ function Dashboard() {
     },
   ];
 
-  if (loading) return <DashboardSkeleton />;
+  if (isLoading) return <DashboardSkeleton />;
 
   return (
     <>
@@ -192,14 +128,14 @@ function Dashboard() {
               </Avatar>
               <div>
                 <h2 className="font-display text-2xl font-bold lg:text-3xl">
-                  Assalomu alaykum, {firstName}! 👋
+                  Xush kelibsiz, {firstName}! 👋
                 </h2>
-                <p className="mt-1 text-white/75">Bugun ham yangi bilim olishga tayyormisiz?</p>
+                <p className="mt-1 text-white/75">Bugun ham yangi bilimlar o'rganamiz!</p>
                 {activeSub && (
                   <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs backdrop-blur-sm">
                     <Calendar className="h-3.5 w-3.5" />
                     <span className="text-white/85">
-                      Tarif faol —{" "}
+                      Tarif faol -{" "}
                       {activeSub.expires_at
                         ? new Date(activeSub.expires_at).toLocaleDateString("uz-UZ")
                         : "muddatsiz"}
@@ -338,11 +274,11 @@ function Dashboard() {
             </Card>
 
             {/* Per-course progress overview */}
-            {courses.length > 0 && (
+            {/* {courses.length > 0 && (
               <Card className="glass rounded-2xl border-transparent">
                 <CardContent className="p-5 lg:p-6">
                   <h3 className="mb-4 font-display text-xl font-semibold">
-                    Taraqqiyot ko'rsatkichi
+                    Kursning jarayon ko'rsatkichi
                   </h3>
                   <div className="space-y-4">
                     {courses.slice(0, 5).map((c: any) => {
@@ -370,7 +306,7 @@ function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            )} */}
           </div>
 
           {/* Right: goal overview + recent activity + plan */}

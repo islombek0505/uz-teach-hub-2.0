@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Topbar } from "@/components/topbar";
 import { PageHeader } from "@/components/page-header";
+import { planDurationLabel } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -135,9 +136,9 @@ function SubscriptionPage() {
       <Topbar title="Tarif va to'lov" />
       <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <PageHeader
-          icon={Crown}
+          // icon={Crown}
           title="Tarif va to'lov"
-          subtitle="Barcha kurslarga to'liq kirish uchun tarifni tanlang"
+          subtitle="Barcha kurslarga to'liq kirish uchun tarif sotib oling"
         />
 
         {/* Current status */}
@@ -147,9 +148,9 @@ function SubscriptionPage() {
         >
           <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15">
+              {/* <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15">
                 <Crown className="h-6 w-6" />
-              </div>
+              </div> */}
               <div>
                 <div className="font-display text-lg font-semibold">
                   {planActive
@@ -207,7 +208,7 @@ function SubscriptionPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                      {p.duration_days} kun · barcha kurslarga ruxsat
+                      {planDurationLabel(p)} · barcha kurslarga ruxsat
                     </div>
                     {p.description && (
                       <p className="text-sm text-muted-foreground">{p.description}</p>
@@ -306,7 +307,7 @@ function SubscriptionPage() {
                       <div className="min-w-0 flex-1">
                         <div className="font-medium">{fmt(Number(p.amount))}</div>
                         <div className="text-xs text-muted-foreground">
-                          {p.plans?.title ?? "—"} ·{" "}
+                          {p.plans?.title ?? "-"} ·{" "}
                           {new Date(p.created_at).toLocaleDateString("uz-UZ")}
                         </div>
                       </div>

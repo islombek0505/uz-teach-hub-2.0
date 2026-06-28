@@ -115,9 +115,9 @@ function FeedbackPage() {
       <Topbar title="Takliflar va murojaatlar" />
       <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <PageHeader
-          icon={MessageSquare}
+          // icon={MessageSquare}
           title="Takliflar va murojaatlar"
-          subtitle="Fikringiz biz uchun muhim — turini tanlang va yozing"
+          subtitle="Platformamiz o'sishi uchun sizning har qanday fikringiz biz uchum muhim! Fikringiz borm? Unda kutmang va bizga yozing."
         />
 
         {/* Type selector */}

@@ -63,7 +63,7 @@ function NotificationsPage() {
       <Topbar title="Bildirishnomalar" />
       <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <PageHeader
-          icon={Bell}
+          // icon={Bell}
           title="Bildirishnomalar"
           subtitle={
             isLoading

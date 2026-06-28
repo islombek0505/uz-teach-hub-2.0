@@ -147,7 +147,7 @@ function ProfilePage() {
                     <Phone className="h-3.5 w-3.5" /> {profile.phone || "—"}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" /> Ro'yxatdan:{" "}
+                    <Calendar className="h-3.5 w-3.5" /> Ro'yxatdan o'tildi:{" "}
                     {profile.created_at
                       ? new Date(profile.created_at).toLocaleDateString("uz-UZ")
                       : "—"}
@@ -168,9 +168,9 @@ function ProfilePage() {
           <Card className="glass rounded-2xl border-transparent lg:col-span-3">
             <CardContent className="p-5 lg:p-6">
               <div className="mb-4 flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                {/* <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
                   <User className="h-4 w-4" />
-                </div>
+                </div> */}
                 <h3 className="font-display text-lg font-semibold">Shaxsiy ma'lumotlar</h3>
               </div>
               <form onSubmit={save} className="space-y-4">
@@ -286,9 +286,9 @@ function ProfilePage() {
           <Card className="glass h-fit rounded-2xl border-transparent lg:col-span-2">
             <CardContent className="p-5 lg:p-6">
               <div className="mb-4 flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-warning/15 text-warning">
+                {/* <div className="grid h-9 w-9 place-items-center rounded-lg bg-warning/15 text-warning">
                   <Lock className="h-4 w-4" />
-                </div>
+                </div> */}
                 <h3 className="font-display text-lg font-semibold">Parolni o'zgartirish</h3>
               </div>
               <form onSubmit={changePassword} className="space-y-4">

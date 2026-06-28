@@ -97,7 +97,7 @@ function AdminNews() {
   return (
     <>
       <Topbar title="Yangiliklar" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-display text-xl font-semibold flex items-center gap-2"><Newspaper className="h-5 w-5" /> Yangiliklar boshqaruvi</h2>

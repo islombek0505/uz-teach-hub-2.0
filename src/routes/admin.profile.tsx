@@ -83,7 +83,7 @@ function AdminProfile() {
   return (
     <>
       <Topbar title="Admin profili" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <Card>
           <CardContent className="flex flex-col items-center gap-5 p-8 text-center sm:flex-row sm:text-left">
             <AvatarUploader

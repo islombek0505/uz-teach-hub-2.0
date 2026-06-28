@@ -62,7 +62,7 @@ function AdminFeedback() {
   return (
     <>
       <Topbar title="Murojaatlar" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <Card><CardContent className="p-5"><div className="text-xs uppercase text-muted-foreground">Jami</div><div className="mt-1 font-display text-2xl font-bold">{items.length}</div></CardContent></Card>
           <Card><CardContent className="p-5"><div className="text-xs uppercase text-muted-foreground">O'qilmagan</div><div className="mt-1 font-display text-2xl font-bold text-primary">{items.filter(f => !f.read).length}</div></CardContent></Card>

@@ -428,3 +428,486 @@
 .animate-badge-ping {
   animation: badge-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
+
+/* =====================================================================
+ * Admin panel — calm "glass" design layer
+ * ---------------------------------------------------------------------
+ * A quieter cousin of the student glass: higher card opacity, softer
+ * shadows and gentler blur, tuned for dense tables, forms and data.
+ * Everything here is scoped to `.admin-surface`, so the student panel
+ * is never affected. Cards upgrade automatically via [data-slot=card].
+ * ===================================================================== */
+
+/* Subtle layered backdrop the admin surfaces sit on. */
+.admin-surface {
+  position: relative;
+  background-color: var(--background);
+  background-image:
+    radial-gradient(55rem 55rem at 100% -8%, oklch(0.55 0.13 220 / 0.10), transparent 55%),
+    radial-gradient(48rem 48rem at -6% 2%, oklch(0.78 0.1 195 / 0.08), transparent 52%),
+    radial-gradient(60rem 60rem at 50% 120%, oklch(0.62 0.15 155 / 0.06), transparent 55%);
+  background-attachment: fixed;
+}
+.dark .admin-surface {
+  background-image:
+    radial-gradient(55rem 55rem at 100% -8%, oklch(0.55 0.13 220 / 0.16), transparent 55%),
+    radial-gradient(48rem 48rem at -6% 2%, oklch(0.4 0.12 250 / 0.18), transparent 52%),
+    radial-gradient(60rem 60rem at 50% 120%, oklch(0.5 0.12 195 / 0.10), transparent 55%);
+}
+
+/* Calm frosted cards — auto-applied to every shadcn <Card> inside admin. */
+.admin-surface [data-slot="card"] {
+  background-color: oklch(1 0 0 / 0.72);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+  border: 1px solid oklch(1 0 0 / 0.6);
+  box-shadow:
+    0 4px 20px -10px oklch(0.32 0.09 240 / 0.18),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.5);
+}
+.dark .admin-surface [data-slot="card"] {
+  background-color: oklch(0.22 0.05 245 / 0.68);
+  border-color: oklch(1 0 0 / 0.08);
+  box-shadow:
+    0 4px 20px -10px oklch(0 0 0 / 0.5),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.05);
+}
+
+/* Opt-in lift for interactive cards: add class `admin-card-hover`. */
+.admin-surface .admin-card-hover {
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.admin-surface .admin-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 36px -14px oklch(0.32 0.09 240 / 0.26),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.6);
+}
+.dark .admin-surface .admin-card-hover:hover {
+  box-shadow:
+    0 14px 36px -14px oklch(0 0 0 / 0.62),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.08);
+}
+
+/* Compact, reusable section header chip used at the top of admin pages. */
+.admin-icon-chip {
+  display: grid;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: var(--gradient-primary);
+  color: oklch(0.98 0.01 240);
+  box-shadow: 0 6px 16px -8px oklch(0.32 0.09 240 / 0.5);
+}
+
+/* Gentle cross-page entrance. Opacity only (no transform) so it never
+ * creates a containing block that would break the sticky Topbar. */
+@keyframes admin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.admin-fade-in {
+  animation: admin-fade-in 0.35s ease both;
+}
+
+/* =====================================================================
+ * Landing page — immersive dark "ocean" 3D layer
+ * ---------------------------------------------------------------------
+ * Everything below is scoped to `.landing-root` so it never leaks into the
+ * student/admin app. Pure CSS 3D + a canvas particle field (no WebGL, no
+ * external libs) — fully CSP-compliant. Animations respect the global
+ * prefers-reduced-motion rule defined in @layer base above.
+ * ===================================================================== */
+.landing-root {
+  background-color: oklch(0.13 0.035 245);
+  background-image:
+    radial-gradient(60rem 60rem at 78% -8%, oklch(0.55 0.13 220 / 0.16), transparent 55%),
+    radial-gradient(48rem 48rem at 0% 8%, oklch(0.78 0.1 195 / 0.08), transparent 52%);
+}
+
+/* Animated gradient brand text */
+.landing-root .text-gradient {
+  background: linear-gradient(100deg, oklch(0.85 0.12 195), oklch(0.66 0.14 220), oklch(0.74 0.13 200));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lc-gradient 6s linear infinite;
+}
+@keyframes lc-gradient {
+  to { background-position: 200% center; }
+}
+
+/* Scroll reveal */
+.landing-root .reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.landing-root .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Hero backdrop layers */
+.landing-root .landing-aurora {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(40rem 30rem at 80% 6%, oklch(0.55 0.13 220 / 0.34), transparent 60%),
+    radial-gradient(34rem 26rem at 10% 0%, oklch(0.78 0.1 195 / 0.18), transparent 55%),
+    radial-gradient(52rem 42rem at 50% 122%, oklch(0.46 0.13 255 / 0.28), transparent 60%);
+  animation: lc-aurora 16s ease-in-out infinite alternate;
+}
+@keyframes lc-aurora {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(0, -16px, 0) scale(1.04); }
+}
+.landing-root .landing-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(oklch(0.7 0.12 200 / 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.7 0.12 200 / 0.055) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(circle at 50% 28%, black, transparent 76%);
+  -webkit-mask-image: radial-gradient(circle at 50% 28%, black, transparent 76%);
+}
+.landing-root .landing-soft-glow {
+  position: absolute;
+  top: 50%;
+  left: -12%;
+  height: 38rem;
+  width: 38rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle, oklch(0.55 0.13 220 / 0.16), transparent 65%);
+}
+.landing-root .landing-soft-glow-right {
+  left: auto;
+  right: -12%;
+  background: radial-gradient(circle, oklch(0.78 0.1 195 / 0.14), transparent 65%);
+}
+
+/* Gradient CTA button */
+.landing-root .lc-btn-glow {
+  background-image: linear-gradient(100deg, oklch(0.84 0.11 195), oklch(0.66 0.14 212));
+  box-shadow: 0 10px 30px -8px oklch(0.6 0.13 210 / 0.6);
+  transition:
+    filter 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+.landing-root .lc-btn-glow:hover {
+  filter: brightness(1.08) saturate(1.05);
+  box-shadow: 0 14px 40px -8px oklch(0.72 0.13 200 / 0.7);
+}
+.landing-root .lc-btn-glow:active {
+  transform: translateY(1px);
+}
+
+/* Glass cards */
+.landing-root .lc-card {
+  position: relative;
+  border-radius: 1.25rem;
+  background: oklch(0.2 0.045 245 / 0.55);
+  border: 1px solid oklch(1 0 0 / 0.08);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  box-shadow:
+    0 12px 32px -18px oklch(0 0 0 / 0.6),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.05);
+}
+.landing-root .lc-tilt {
+  transform: perspective(800px) translateY(0);
+  transition:
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.4s ease,
+    border-color 0.4s ease;
+}
+.landing-root .lc-tilt:hover {
+  transform: perspective(800px) translateY(-6px) rotateX(4deg) rotateY(-4deg);
+  border-color: oklch(0.7 0.12 200 / 0.45);
+  box-shadow:
+    0 26px 52px -22px oklch(0.55 0.13 220 / 0.55),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.08);
+}
+
+/* Icon chip inside cards */
+.landing-root .lc-icon {
+  display: grid;
+  place-items: center;
+  height: 3rem;
+  width: 3rem;
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, oklch(0.6 0.13 220 / 0.28), oklch(0.78 0.1 195 / 0.14));
+  border: 1px solid oklch(0.7 0.12 200 / 0.3);
+  color: oklch(0.86 0.11 195);
+  box-shadow: inset 0 0 22px oklch(0.7 0.12 195 / 0.16);
+}
+.landing-root .lc-icon-lg {
+  height: 3.5rem;
+  width: 3.5rem;
+}
+
+/* Trial banner */
+.landing-root .lc-trial {
+  background: linear-gradient(115deg, oklch(0.3 0.1 248), oklch(0.42 0.13 218) 55%, oklch(0.58 0.12 196));
+  border: 1px solid oklch(0.82 0.1 195 / 0.3);
+  box-shadow: 0 26px 60px -26px oklch(0.5 0.13 210 / 0.7);
+}
+.landing-root .lc-trial::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(28rem 14rem at 85% -30%, oklch(1 0 0 / 0.16), transparent 60%);
+  pointer-events: none;
+}
+
+/* Pricing card */
+.landing-root .lc-price {
+  background: oklch(0.19 0.045 245 / 0.72);
+  border: 1px solid oklch(0.7 0.12 200 / 0.35);
+  box-shadow:
+    0 30px 70px -30px oklch(0.55 0.13 220 / 0.6),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Final CTA band */
+.landing-root .lc-finalcta {
+  background:
+    radial-gradient(50rem 30rem at 50% -25%, oklch(0.55 0.13 220 / 0.5), transparent 60%),
+    linear-gradient(160deg, oklch(0.18 0.05 245), oklch(0.22 0.06 240));
+  border: 1px solid oklch(1 0 0 / 0.1);
+  box-shadow: 0 30px 80px -32px oklch(0.5 0.13 215 / 0.6);
+}
+
+/* =====================================================================
+ * Hero 3D visual (canvas particles + CSS-3D scene)
+ * ===================================================================== */
+.landing-root .landing-hero-visual {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  --mx: 0;
+  --my: 0;
+}
+.landing-root .landing-particles {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* colour orbs */
+.landing-root .hv-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(58px);
+  opacity: 0.6;
+}
+.landing-root .hv-orb-1 {
+  height: 17rem;
+  width: 17rem;
+  top: -4%;
+  right: 4%;
+  background: oklch(0.6 0.13 220 / 0.6);
+  animation: hv-drift-a 15s ease-in-out infinite;
+}
+.landing-root .hv-orb-2 {
+  height: 15rem;
+  width: 15rem;
+  bottom: 2%;
+  left: -6%;
+  background: oklch(0.78 0.1 195 / 0.45);
+  animation: hv-drift-b 19s ease-in-out infinite;
+}
+.landing-root .hv-orb-3 {
+  height: 11rem;
+  width: 11rem;
+  top: 42%;
+  left: 46%;
+  background: oklch(0.62 0.15 155 / 0.3);
+  animation: hv-drift-a 22s ease-in-out infinite;
+}
+@keyframes hv-drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(14px, -22px, 0) scale(1.08); }
+}
+@keyframes hv-drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-20px, 18px, 0) scale(1.1); }
+}
+
+/* 3D stage + scene (tilts with pointer via --mx/--my) */
+.landing-root .hv-stage {
+  position: absolute;
+  inset: 0;
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
+}
+.landing-root .hv-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(calc(var(--my) * -9deg)) rotateY(calc(var(--mx) * 11deg));
+  transition: transform 0.15s ease-out;
+}
+
+/* orbiting rings */
+.landing-root .hv-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1.5px solid oklch(0.7 0.12 195 / 0.35);
+}
+.landing-root .hv-ring-1 {
+  height: 17rem;
+  width: 17rem;
+  margin: -8.5rem 0 0 -8.5rem;
+  animation: hv-orbit 24s linear infinite;
+}
+.landing-root .hv-ring-2 {
+  height: 22rem;
+  width: 22rem;
+  margin: -11rem 0 0 -11rem;
+  border-color: oklch(0.55 0.13 220 / 0.3);
+  animation: hv-orbit 32s linear infinite reverse;
+}
+.landing-root .hv-ring-3 {
+  height: 12.5rem;
+  width: 12.5rem;
+  margin: -6.25rem 0 0 -6.25rem;
+  border-style: dashed;
+  border-color: oklch(0.62 0.15 155 / 0.28);
+  animation: hv-orbit 18s linear infinite;
+}
+@keyframes hv-orbit {
+  from { transform: rotateX(72deg) rotateZ(0deg); }
+  to { transform: rotateX(72deg) rotateZ(360deg); }
+}
+
+/* spinning glass cube */
+.landing-root .hv-cube {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 8rem;
+  width: 8rem;
+  margin: -4rem 0 0 -4rem;
+  transform-style: preserve-3d;
+  animation: hv-spin 20s linear infinite;
+}
+.landing-root .hv-face {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  height: 8rem;
+  width: 8rem;
+  border-radius: 1rem;
+  border: 1px solid oklch(0.82 0.1 195 / 0.5);
+  background: linear-gradient(135deg, oklch(0.6 0.13 220 / 0.16), oklch(0.78 0.1 195 / 0.08));
+  box-shadow: inset 0 0 34px oklch(0.7 0.12 195 / 0.28);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.landing-root .hv-face-icon {
+  height: 2.4rem;
+  width: 2.4rem;
+  color: oklch(0.88 0.11 195);
+  filter: drop-shadow(0 0 10px oklch(0.8 0.12 195 / 0.7));
+}
+.landing-root .hv-face-front { transform: translateZ(4rem); }
+.landing-root .hv-face-back { transform: rotateY(180deg) translateZ(4rem); }
+.landing-root .hv-face-right { transform: rotateY(90deg) translateZ(4rem); }
+.landing-root .hv-face-left { transform: rotateY(-90deg) translateZ(4rem); }
+.landing-root .hv-face-top { transform: rotateX(90deg) translateZ(4rem); }
+.landing-root .hv-face-bottom { transform: rotateX(-90deg) translateZ(4rem); }
+@keyframes hv-spin {
+  from { transform: rotateX(-22deg) rotateY(0deg); }
+  to { transform: rotateX(-22deg) rotateY(360deg); }
+}
+
+/* floating glass chips */
+.landing-root .hv-chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.9rem;
+  background: oklch(0.21 0.05 245 / 0.7);
+  border: 1px solid oklch(1 0 0 / 0.12);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 14px 32px -14px oklch(0 0 0 / 0.65);
+  white-space: nowrap;
+}
+.landing-root .hv-chip-icon {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: oklch(0.85 0.11 195);
+}
+.landing-root .hv-chip-icon-mint { color: oklch(0.72 0.15 155); }
+.landing-root .hv-chip-icon-blue { color: oklch(0.7 0.13 235); }
+.landing-root .hv-chip-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: oklch(0.97 0.01 240);
+  line-height: 1.1;
+}
+.landing-root .hv-chip-sub {
+  font-size: 0.68rem;
+  color: oklch(0.75 0.03 230);
+}
+.landing-root .hv-chip-1 { top: 7%; left: 0%; animation: hv-float-1 7s ease-in-out infinite; }
+.landing-root .hv-chip-2 { bottom: 11%; left: 5%; animation: hv-float-2 6.2s ease-in-out infinite; }
+.landing-root .hv-chip-3 { top: 21%; right: -1%; animation: hv-float-3 8s ease-in-out infinite; }
+@keyframes hv-float-1 {
+  0%, 100% { transform: translateZ(5rem) translateY(0); }
+  50% { transform: translateZ(5rem) translateY(-13px); }
+}
+@keyframes hv-float-2 {
+  0%, 100% { transform: translateZ(7rem) translateY(0); }
+  50% { transform: translateZ(7rem) translateY(14px); }
+}
+@keyframes hv-float-3 {
+  0%, 100% { transform: translateZ(3.5rem) translateY(0); }
+  50% { transform: translateZ(3.5rem) translateY(-11px); }
+}
+
+/* small orbiting glints */
+.landing-root .hv-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 0.6rem;
+  width: 0.6rem;
+  margin: -0.3rem 0 0 -0.3rem;
+  border-radius: 50%;
+  background: oklch(0.88 0.12 195);
+  box-shadow: 0 0 16px oklch(0.82 0.12 195);
+}
+.landing-root .hv-dot-1 { animation: hv-orbit-dot-1 14s linear infinite; }
+.landing-root .hv-dot-2 { animation: hv-orbit-dot-2 19s linear infinite; }
+@keyframes hv-orbit-dot-1 {
+  from { transform: rotate(0deg) translateX(9rem) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(9rem) rotate(-360deg); }
+}
+@keyframes hv-orbit-dot-2 {
+  from { transform: rotate(0deg) translateX(6.5rem) rotate(0deg); }
+  to { transform: rotate(-360deg) translateX(6.5rem) rotate(360deg); }
+}

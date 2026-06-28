@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Topbar } from "@/components/topbar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +23,18 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, X, Receipt, ExternalLink, FileText } from "lucide-react";
+import { addMonths } from "@/lib/utils";
+import {
+  CheckCircle2,
+  X,
+  Receipt,
+  ExternalLink,
+  FileText,
+  Clock,
+  Wallet,
+  Phone,
+  Inbox,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +45,34 @@ export const Route = createFileRoute("/admin/payments")({
 
 const fmt = (n: number) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
 
+const initialsOf = (name?: string | null) =>
+  (name || "?")
+    .split(" ")
+    .map((s) => s[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "?";
+
+const STATUS = {
+  approved: { label: "Tasdiqlangan", cls: "bg-success/15 text-success", icon: CheckCircle2 },
+  pending: { label: "Kutilmoqda", cls: "bg-warning/15 text-warning", icon: Clock },
+  rejected: { label: "Rad etilgan", cls: "bg-destructive/15 text-destructive", icon: X },
+} as const;
+
+function StatusPill({ status }: { status: string }) {
+  const m = STATUS[status as keyof typeof STATUS];
+  if (!m) return <span className="text-xs text-muted-foreground">—</span>;
+  const Icon = m.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${m.cls}`}
+    >
+      <Icon className="h-3.5 w-3.5" /> {m.label}
+    </span>
+  );
+}
+
 function AdminPayments() {
   const [filter, setFilter] = useState<string>("all");
   const qc = useQueryClient();
@@ -36,11 +82,14 @@ function AdminPayments() {
     queryFn: async () => {
       const { data: pays, error } = await supabase
         .from("payments")
-        .select("*, plans(id, title, duration_days)")
+        .select("*, plans(id, title, duration_days, duration_months)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       const userIds = Array.from(new Set((pays ?? []).map((p: any) => p.user_id)));
-      const { data: profs } = await supabase.from("profiles").select("id, full_name, phone").in("id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone")
+        .in("id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
       const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
       return (pays ?? []).map((p: any) => ({ ...p, profile: pmap.get(p.user_id) }));
     },
@@ -48,31 +97,78 @@ function AdminPayments() {
 
   const list = filter === "all" ? payments : payments.filter((p: any) => p.status === filter);
 
+  const summary = useMemo(() => {
+    const by = (st: string) => payments.filter((p: any) => p.status === st);
+    const sum = (arr: any[]) => arr.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0);
+    return {
+      counts: {
+        all: payments.length,
+        pending: by("pending").length,
+        approved: by("approved").length,
+        rejected: by("rejected").length,
+      },
+      revenue: sum(by("approved")),
+      pendingSum: sum(by("pending")),
+    };
+  }, [payments]);
+
   const approve = useMutation({
     mutationFn: async (p: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error: e1 } = await supabase.from("payments").update({ status: "approved", reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", p.id);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const { error: e1 } = await supabase
+        .from("payments")
+        .update({
+          status: "approved",
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", p.id);
       if (e1) throw e1;
-      const days = p.plans?.duration_days ?? 30;
       // extend from current expiry if still active, else from now
-      const { data: current } = await supabase.from("user_plan").select("expires_at").eq("user_id", p.user_id).maybeSingle();
-      const baseTs = current?.expires_at && new Date(current.expires_at).getTime() > Date.now()
-        ? new Date(current.expires_at).getTime()
-        : Date.now();
-      const expires = new Date(baseTs + days * 24 * 60 * 60 * 1000);
+      const { data: current } = await supabase
+        .from("user_plan")
+        .select("expires_at")
+        .eq("user_id", p.user_id)
+        .maybeSingle();
+      const baseTs =
+        current?.expires_at && new Date(current.expires_at).getTime() > Date.now()
+          ? new Date(current.expires_at).getTime()
+          : Date.now();
+      // Calendar-accurate: add whole calendar months when the plan defines them
+      // (so 3 months = exactly 3 months from the start date, not a flat 90 days),
+      // falling back to the legacy fixed day count for older plans.
+      const months = p.plans?.duration_months ?? null;
+      const expires =
+        months && months > 0
+          ? addMonths(new Date(baseTs), months)
+          : new Date(baseTs + (p.plans?.duration_days ?? 30) * 24 * 60 * 60 * 1000);
       const { error: e2 } = await supabase.from("user_plan").upsert(
-        { user_id: p.user_id, plan_id: p.plan_id, payment_id: p.id, is_trial: false, started_at: new Date().toISOString(), expires_at: expires.toISOString() },
+        {
+          user_id: p.user_id,
+          plan_id: p.plan_id,
+          payment_id: p.id,
+          is_trial: false,
+          started_at: new Date().toISOString(),
+          expires_at: expires.toISOString(),
+        },
         { onConflict: "user_id" },
       );
       if (e2) throw e2;
     },
-    onSuccess: () => { toast.success("Tasdiqlandi va tarif faollashtirildi"); qc.invalidateQueries({ queryKey: ["admin", "payments"] }); },
+    onSuccess: () => {
+      toast.success("Tasdiqlandi va tarif faollashtirildi");
+      qc.invalidateQueries({ queryKey: ["admin", "payments"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
   const reject = useMutation({
     mutationFn: async ({ p, reason }: { p: any; reason: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("payments")
         .update({
@@ -84,73 +180,205 @@ function AdminPayments() {
         .eq("id", p.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Rad etildi"); qc.invalidateQueries({ queryKey: ["admin", "payments"] }); },
+    onSuccess: () => {
+      toast.success("Rad etildi");
+      qc.invalidateQueries({ queryKey: ["admin", "payments"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const cards = [
+    {
+      label: "Tasdiqlangan daromad",
+      value: fmt(summary.revenue),
+      sub: `${summary.counts.approved} ta to'lov`,
+      icon: Wallet,
+      tint: "text-success",
+      chip: "bg-success/15",
+    },
+    {
+      label: "Kutilayotgan",
+      value: String(summary.counts.pending),
+      sub: summary.pendingSum ? fmt(summary.pendingSum) : "Yangi yo'q",
+      icon: Clock,
+      tint: "text-warning",
+      chip: "bg-warning/15",
+    },
+    {
+      label: "Tasdiqlangan",
+      value: String(summary.counts.approved),
+      sub: "Jami tasdiqlangan",
+      icon: CheckCircle2,
+      tint: "text-primary",
+      chip: "bg-primary/10",
+    },
+    {
+      label: "Rad etilgan",
+      value: String(summary.counts.rejected),
+      sub: "Jami rad etilgan",
+      icon: X,
+      tint: "text-destructive",
+      chip: "bg-destructive/15",
+    },
+  ];
+
+  const tabs = [
+    { value: "all", label: "Hammasi", count: summary.counts.all },
+    { value: "pending", label: "Kutilmoqda", count: summary.counts.pending },
+    { value: "approved", label: "Tasdiqlangan", count: summary.counts.approved },
+    { value: "rejected", label: "Rad etilgan", count: summary.counts.rejected },
+  ];
 
   return (
     <>
       <Topbar title="To'lovlar boshqaruvi" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
-        <Tabs value={filter} onValueChange={setFilter}>
-          <TabsList>
-            <TabsTrigger value="all">Hammasi</TabsTrigger>
-            <TabsTrigger value="pending">Kutilmoqda</TabsTrigger>
-            <TabsTrigger value="approved">Tasdiqlangan</TabsTrigger>
-            <TabsTrigger value="rejected">Rad etilgan</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
+        {/* Summary */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {cards.map((c) => (
+            <Card key={c.label} className="rounded-2xl border-transparent">
+              <CardContent className="p-5">
+                <div className={`grid h-11 w-11 place-items-center rounded-xl ${c.chip}`}>
+                  <c.icon className={`h-5 w-5 ${c.tint}`} />
+                </div>
+                <div className="mt-4 truncate font-display text-2xl font-bold tracking-tight">
+                  {c.value}
+                </div>
+                <div className="mt-1 text-sm text-muted-foreground">{c.label}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground/80">{c.sub}</div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        <Card>
-          <CardContent className="p-0">
+        {/* Table */}
+        <Card className="overflow-hidden rounded-2xl border-transparent">
+          <div className="flex flex-col gap-3 border-b border-border/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <Tabs value={filter} onValueChange={setFilter}>
+              <TabsList className="flex-wrap">
+                {tabs.map((t) => (
+                  <TabsTrigger key={t.value} value={t.value} className="gap-1.5">
+                    {t.label}
+                    <span className="rounded-full bg-foreground/10 px-1.5 text-[11px] font-semibold leading-5">
+                      {t.count}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+            <span className="text-sm text-muted-foreground">{list.length} ta ko'rsatilmoqda</span>
+          </div>
+
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>O'quvchi</TableHead>
-                  <TableHead>Tarif</TableHead>
-                  <TableHead>Summa</TableHead>
-                  <TableHead>Chek / Izoh</TableHead>
-                  <TableHead>Sana</TableHead>
-                  <TableHead>Holat</TableHead>
-                  <TableHead className="w-32">Amallar</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    O'quvchi
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Tarif
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Summa
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Chek / Izoh
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Sana
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Holat
+                  </TableHead>
+                  <TableHead className="w-28 text-right text-xs uppercase tracking-wide text-muted-foreground">
+                    Amallar
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Yuklanmoqda...</TableCell></TableRow>}
-                {!isLoading && list.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">To'lovlar yo'q</TableCell></TableRow>}
+                {isLoading && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+                      Yuklanmoqda...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoading && list.length === 0 && (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={7} className="py-12">
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <div className="grid h-12 w-12 place-items-center rounded-full bg-muted">
+                          <Inbox className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Bu bo'limda to'lovlar yo'q
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
                 {list.map((p: any) => (
-                  <TableRow key={p.id}>
+                  <TableRow
+                    key={p.id}
+                    className={`border-border/60 transition-colors ${p.status === "pending" ? "bg-warning/[0.035]" : ""}`}
+                  >
                     <TableCell>
-                      <div className="font-medium">{p.profile?.full_name ?? p.payer_name ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground">{p.profile?.phone ?? p.payer_phone ?? "—"}</div>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                            {initialsOf(p.profile?.full_name ?? p.payer_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">
+                            {p.profile?.full_name ?? p.payer_name ?? "—"}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            {p.profile?.phone ?? p.payer_phone ?? "—"}
+                          </div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm">{p.plans?.title ?? "—"}</TableCell>
-                    <TableCell className="font-display font-semibold">{fmt(Number(p.amount))}</TableCell>
+                    <TableCell className="whitespace-nowrap font-display font-semibold tabular-nums">
+                      {fmt(Number(p.amount))}
+                    </TableCell>
                     <TableCell>
                       <ReceiptCell receiptUrl={p.receipt_url} note={p.note} />
                     </TableCell>
-                    <TableCell className="text-sm">{new Date(p.created_at).toLocaleDateString("uz-UZ")}</TableCell>
-                    <TableCell>
-                      {p.status === "approved" && <Badge className="bg-success text-success-foreground">Tasdiqlangan</Badge>}
-                      {p.status === "pending" && <Badge className="bg-warning text-warning-foreground">Kutilmoqda</Badge>}
-                      {p.status === "rejected" && <Badge variant="destructive">Rad etilgan</Badge>}
+                    <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                      {new Date(p.created_at).toLocaleDateString("uz-UZ")}
                     </TableCell>
                     <TableCell>
-                      {p.status === "pending" && (
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="text-success" onClick={() => approve.mutate(p)} disabled={approve.isPending}><CheckCircle2 className="h-4 w-4" /></Button>
+                      <StatusPill status={p.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {p.status === "pending" ? (
+                        <div className="flex justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            className="h-8 gap-1 bg-success text-success-foreground hover:bg-success/90"
+                            onClick={() => approve.mutate(p)}
+                            disabled={approve.isPending}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Tasdiq
+                          </Button>
                           <RejectDialog
                             onConfirm={(reason) => reject.mutate({ p, reason })}
                             pending={reject.isPending}
                           />
                         </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
+          </div>
         </Card>
       </main>
     </>
@@ -181,8 +409,13 @@ function RejectDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="text-destructive" disabled={pending}>
-          <X className="h-4 w-4" />
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8 gap-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          disabled={pending}
+        >
+          <X className="h-3.5 w-3.5" /> Rad
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -199,9 +432,7 @@ function RejectDialog({
             onChange={(e) => setReason(e.target.value)}
             placeholder="Masalan: Chek summasi tarif narxiga to'g'ri kelmadi"
           />
-          <p className="text-xs text-muted-foreground">
-            Bu sabab o'quvchiga ko'rsatiladi.
-          </p>
+          <p className="text-xs text-muted-foreground">Bu sabab o'quvchiga ko'rsatiladi.</p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
@@ -304,10 +535,7 @@ function ReceiptCell({ receiptUrl, note }: { receiptUrl: string | null; note: st
         <span className="text-xs text-muted-foreground">Chek yo'q</span>
       )}
       {note && (
-        <div
-          className="max-w-[220px] truncate text-xs text-muted-foreground"
-          title={note}
-        >
+        <div className="max-w-[220px] truncate text-xs text-muted-foreground" title={note}>
           💬 {note}
         </div>
       )}

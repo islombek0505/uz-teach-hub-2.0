@@ -44,7 +44,7 @@ function NewCourse() {
   return (
     <>
       <Topbar title="Yangi kurs" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <Link to="/admin/courses" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ChevronLeft className="h-4 w-4" /> Kurslarga qaytish</Link>
 
         <form onSubmit={submit} className="grid gap-6 lg:grid-cols-[1fr_360px]">

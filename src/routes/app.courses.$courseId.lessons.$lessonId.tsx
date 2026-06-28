@@ -274,7 +274,26 @@ function LessonPlayer() {
 
             {/* Lesson header — single source of truth for title + meta */}
             <div className="glass rounded-2xl border-transparent p-5">
-              <div className="flex flex-wrap items-center gap-2">
+              
+              <h1 className="font-display text-2xl font-bold leading-tight lg:text-3xl">
+                {lesson.title}
+              </h1>
+              {lesson.description && (
+                <p className="mt-2 leading-relaxed text-muted-foreground">{lesson.description}</p>
+              )}
+              {/* {!lesson.has_quiz && !lessonDone && (
+                <Button onClick={markCompleted} className="mt-4">
+                  <CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash
+                </Button>
+              )} */}
+              {lesson.has_quiz && !lessonDone && (
+                <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+                  <ListChecks className="h-4 w-4" /> Darsni yakunlash uchun test topshiring (≥
+                  {threshold}%)
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 <Badge variant="secondary" className="gap-1">
                   <BookOpen className="h-3 w-3" /> {lesson.moduleTitle}
                 </Badge>
@@ -292,23 +311,6 @@ function LessonPlayer() {
                   </Badge>
                 )}
               </div>
-              <h1 className="mt-3 font-display text-2xl font-bold leading-tight lg:text-3xl">
-                {lesson.title}
-              </h1>
-              {lesson.description && (
-                <p className="mt-2 leading-relaxed text-muted-foreground">{lesson.description}</p>
-              )}
-              {!lesson.has_quiz && !lessonDone && (
-                <Button onClick={markCompleted} className="mt-4">
-                  <CheckCircle2 className="mr-2 h-4 w-4" /> Yakunlandi deb belgilash
-                </Button>
-              )}
-              {lesson.has_quiz && !lessonDone && (
-                <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-                  <ListChecks className="h-4 w-4" /> Darsni yakunlash uchun test topshiring (≥
-                  {threshold}%)
-                </p>
-              )}
             </div>
 
             <Tabs value={tab} onValueChange={setTab}>
@@ -399,15 +401,15 @@ function LessonPlayer() {
                   <Card className="glass border-transparent">
                     <CardContent className="space-y-5 p-6">
                       <div className="flex items-center gap-3">
-                        <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary">
+                        {/* <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary">
                           <ListChecks className="h-6 w-6" />
-                        </div>
+                        </div> */}
                         <div>
                           <h3 className="font-display text-lg font-semibold">
                             Dars yakunidagi test
                           </h3>
                           <p className="text-sm text-muted-foreground">
-                            Keyingi darsga o'tish uchun {threshold}%+ ball to'plang
+                            Yaxshi natija uchun {threshold}% va undan yuqori ko'rsatkichni qo'lga kiriting
                           </p>
                         </div>
                       </div>
@@ -476,7 +478,7 @@ function LessonPlayer() {
 
                       {!submitted && lastAttempt && (
                         <div className="flex items-center gap-2 rounded-xl border bg-muted/30 p-3 text-sm">
-                          <span className="text-muted-foreground">Oxirgi urinish:</span>
+                          <span className="text-muted-foreground">Oxirgi natijangiz:</span>
                           <strong>{lastAttempt.score}%</strong>
                           {lastAttempt.passed ? (
                             <CheckCircle2 className="h-4 w-4 text-success" />
@@ -581,6 +583,13 @@ function LessonPlayer() {
                 </TabsContent>
               )}
             </Tabs>
+            <div className="flex justify-end">
+              {!lesson.has_quiz && !lessonDone && (
+                  <Button onClick={markCompleted}>
+                    <CheckCircle2 className="h-4 w-4" /> Yakunlandi deb belgilash
+                  </Button>
+              )}
+            </div>
 
             <div className="glass flex items-center justify-between gap-3 rounded-2xl border-transparent p-3">
               <Button
@@ -612,7 +621,7 @@ function LessonPlayer() {
             <Card className="glass border-transparent">
               <CardContent className="p-4">
                 <h3 className="mb-3 flex items-center gap-2 font-display font-semibold">
-                  <BookOpen className="h-4 w-4 text-primary" /> Kurs darslari
+                  Kurs rejasi
                 </h3>
                 <LessonSidebarAccordion
                   modules={course.modules}

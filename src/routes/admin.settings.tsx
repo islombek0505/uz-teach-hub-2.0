@@ -36,7 +36,7 @@ function AdminSettings() {
   return (
     <>
       <Topbar title="Sozlamalar" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div>
           <h2 className="font-display text-xl font-semibold">Platforma sozlamalari</h2>
           <p className="text-sm text-muted-foreground">Aloqa kanallari, to'lov kartalari va tizim parametrlari</p>

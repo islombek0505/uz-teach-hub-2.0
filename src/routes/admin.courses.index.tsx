@@ -52,7 +52,7 @@ function AdminCourses() {
   return (
     <>
       <Topbar title="Kurslar boshqaruvi" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-xl font-semibold">Barcha kurslar</h2>

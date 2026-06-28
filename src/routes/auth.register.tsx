@@ -150,7 +150,7 @@ function RegisterPage() {
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {step === "info" &&
-          "Birinchi marta ro'yxatdan o'tyapsiz — Telegram orqali tasdiqlash kodi yuboriladi."}
+          "Birinchi marta ro'yxatdan o'tyapsiz - Telegram orqali tasdiqlash kodi yuboriladi."}
         {step === "otp" && `${phone} raqamidagi Telegramga yuborilgan 6 xonali kodni kiriting.`}
         {step === "password" && "O'zingiz uchun ishonchli parol o'ylang."}
       </p>

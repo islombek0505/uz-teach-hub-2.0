@@ -111,8 +111,9 @@ function CourseDetail() {
           <Card className="glass border-transparent">
             <CardContent className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-sm font-medium">Sizning taraqqiyotingiz</div>
-                <div className="mt-1 text-xs text-muted-foreground">{done} ta dars yakunlangan, {total - done} ta qoldi</div>
+                <div className="text-sm font-medium">O'zlashtirish darajasi</div>
+                {done - total === 0 && <div className="mt-1 text-xs text-muted-foreground">Tabriklaymiz, kursni yakunladingiz.</div>}
+                {done - total > 0 && <div className="mt-1 text-xs text-muted-foreground">{done} ta dars yakunlangan, {total - done} ta qoldi.</div>}
               </div>
               <div className="w-full sm:w-1/2">
                 <div className="flex justify-between text-xs text-muted-foreground"><span>{pct}%</span></div>

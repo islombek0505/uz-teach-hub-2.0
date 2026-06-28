@@ -11,7 +11,7 @@ import { resolveNitroPreset } from "./src/lib/deploy-preset";
 // Plugins are wired directly: Tailwind, tsconfig path aliases, TanStack Start
 // (with the server entry pointing at our SSR wrapper), Nitro for production
 // server output, and the React plugin.
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, isSsrBuild }) => ({
   plugins: [
     tailwindcss(),
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
@@ -30,6 +30,28 @@ export default defineConfig(({ command }) => ({
     ...(command === "build" ? [nitro({ preset: resolveNitroPreset() })] : []),
     viteReact(),
   ],
+  // Client-only vendor chunking: group large, stable third-party libs into
+  // their own long-cacheable chunks, so they aren't re-downloaded when app
+  // code changes. Routes are ALREADY auto code-split by TanStack Start; this
+  // only improves caching of shared vendor code. Guarded to the client build
+  // so the SSR/Nitro bundle is left untouched.
+  // VERIFY: run `npm run build` once after pulling this — if anything looks
+  // off, deleting this whole `build` block reverts to the previous behaviour.
+  ...(!isSsrBuild
+    ? {
+        build: {
+          rollupOptions: {
+            output: {
+              manualChunks(id: string) {
+                if (!id.includes("node_modules")) return;
+                if (id.includes("@radix-ui")) return "vendor-radix";
+                if (id.includes("@supabase")) return "vendor-supabase";
+              },
+            },
+          },
+        },
+      }
+    : {}),
   resolve: {
     alias: { "@": `${process.cwd()}/src` },
     // Ensure a single copy of React / React Query across the bundle.

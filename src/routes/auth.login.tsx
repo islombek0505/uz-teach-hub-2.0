@@ -199,7 +199,7 @@ function ResetPasswordFlow({ initialPhone, onBack }: { initialPhone: string; onB
       <h1 className="font-display text-3xl font-bold tracking-tight">Parolni tiklash</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         {step === "phone"
-          ? "Raqamingizni kiriting — Telegramga tasdiqlash kodi yuboriladi."
+          ? "Raqamingizni kiriting - Telegramga tasdiqlash kodi yuboriladi."
           : `${phone} raqamidagi Telegramga yuborilgan kodni kiriting va yangi parol o'rnating.`}
       </p>
 

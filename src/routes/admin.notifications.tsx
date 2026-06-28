@@ -87,7 +87,7 @@ function AdminNotifications() {
   return (
     <>
       <Topbar title="Bildirishnomalar" initials="AD" />
-      <main className="flex-1 space-y-6 p-4 lg:p-6">
+      <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
         <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
           <Card className="h-fit">
             <CardHeader>
