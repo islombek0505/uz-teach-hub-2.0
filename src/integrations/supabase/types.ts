@@ -160,6 +160,124 @@ export type Database = {
         }
         Relationships: []
       }
+      group_members: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          group_id: string
+          id: string
+          requested_at: string
+          status: Database["public"]["Enums"]["membership_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          group_id: string
+          id?: string
+          requested_at?: string
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          group_id?: string
+          id?: string
+          requested_at?: string
+          status?: Database["public"]["Enums"]["membership_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          capacity: number
+          course_id: string
+          cover_url: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_weeks: number | null
+          end_time: string | null
+          id: string
+          min_capacity: number | null
+          name: string
+          price: number
+          price_period: string
+          schedule_days: number[]
+          start_time: string | null
+          starts_on: string | null
+          status: Database["public"]["Enums"]["group_status"]
+          telegram_link: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number
+          course_id: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          end_time?: string | null
+          id?: string
+          min_capacity?: number | null
+          name: string
+          price?: number
+          price_period?: string
+          schedule_days?: number[]
+          start_time?: string | null
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["group_status"]
+          telegram_link?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number
+          course_id?: string
+          cover_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number | null
+          end_time?: string | null
+          id?: string
+          min_capacity?: number | null
+          name?: string
+          price?: number
+          price_period?: string
+          schedule_days?: number[]
+          start_time?: string | null
+          starts_on?: string | null
+          status?: Database["public"]["Enums"]["group_status"]
+          telegram_link?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_materials: {
         Row: {
           created_at: string
@@ -201,7 +319,8 @@ export type Database = {
       lesson_progress: {
         Row: {
           completed: boolean
-          course_id: string
+          course_id: string | null
+          group_id: string | null
           id: string
           last_position: number
           lesson_id: string
@@ -211,7 +330,8 @@ export type Database = {
         }
         Insert: {
           completed?: boolean
-          course_id: string
+          course_id?: string | null
+          group_id?: string | null
           id?: string
           last_position?: number
           lesson_id: string
@@ -221,7 +341,8 @@ export type Database = {
         }
         Update: {
           completed?: boolean
-          course_id?: string
+          course_id?: string | null
+          group_id?: string | null
           id?: string
           last_position?: number
           lesson_id?: string
@@ -251,10 +372,11 @@ export type Database = {
           bunny_library_id: string | null
           bunny_video_id: string | null
           content: string | null
-          course_id: string
+          course_id: string | null
           created_at: string
           description: string | null
           duration_seconds: number | null
+          group_id: string | null
           has_quiz: boolean
           id: string
           module_id: string
@@ -269,10 +391,11 @@ export type Database = {
           bunny_library_id?: string | null
           bunny_video_id?: string | null
           content?: string | null
-          course_id: string
+          course_id?: string | null
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
+          group_id?: string | null
           has_quiz?: boolean
           id?: string
           module_id: string
@@ -287,10 +410,11 @@ export type Database = {
           bunny_library_id?: string | null
           bunny_video_id?: string | null
           content?: string | null
-          course_id?: string
+          course_id?: string | null
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
+          group_id?: string | null
           has_quiz?: boolean
           id?: string
           module_id?: string
@@ -320,25 +444,28 @@ export type Database = {
       }
       modules: {
         Row: {
-          course_id: string
+          course_id: string | null
           created_at: string
           description: string | null
+          group_id: string | null
           id: string
           position: number
           title: string
         }
         Insert: {
-          course_id: string
+          course_id?: string | null
           created_at?: string
           description?: string | null
+          group_id?: string | null
           id?: string
           position?: number
           title: string
         }
         Update: {
-          course_id?: string
+          course_id?: string | null
           created_at?: string
           description?: string | null
+          group_id?: string | null
           id?: string
           position?: number
           title?: string
@@ -426,6 +553,7 @@ export type Database = {
           body: string | null
           created_at: string
           created_by: string | null
+          group_id: string | null
           id: string
           link: string | null
           title: string
@@ -436,6 +564,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           created_by?: string | null
+          group_id?: string | null
           id?: string
           link?: string | null
           title: string
@@ -446,6 +575,7 @@ export type Database = {
           body?: string | null
           created_at?: string
           created_by?: string | null
+          group_id?: string | null
           id?: string
           link?: string | null
           title?: string
@@ -496,10 +626,12 @@ export type Database = {
           amount: number
           course_id: string | null
           created_at: string
+          group_id: string | null
           id: string
           note: string | null
           payer_name: string | null
           payer_phone: string | null
+          period_month: string | null
           plan_id: string | null
           receipt_url: string | null
           reviewed_at: string | null
@@ -513,10 +645,12 @@ export type Database = {
           amount: number
           course_id?: string | null
           created_at?: string
+          group_id?: string | null
           id?: string
           note?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          period_month?: string | null
           plan_id?: string | null
           receipt_url?: string | null
           reviewed_at?: string | null
@@ -530,10 +664,12 @@ export type Database = {
           amount?: number
           course_id?: string | null
           created_at?: string
+          group_id?: string | null
           id?: string
           note?: string | null
           payer_name?: string | null
           payer_phone?: string | null
+          period_month?: string | null
           plan_id?: string | null
           receipt_url?: string | null
           reviewed_at?: string | null
@@ -548,6 +684,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
           {
@@ -826,9 +969,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      group_approved_count: { Args: { _group_id: string }; Returns: number }
       has_active_plan: { Args: { _user_id: string }; Returns: boolean }
       has_course_access: {
         Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { _group_id: string; _user_id: string }
         Returns: boolean
       }
       has_role: {
@@ -842,7 +990,9 @@ export type Database = {
     Enums: {
       app_role: "admin" | "student" | "mentor"
       feedback_type: "suggestion" | "feedback" | "complaint" | "question"
+      group_status: "draft" | "recruiting" | "active" | "completed" | "archived"
       lesson_type: "video" | "presentation" | "text"
+      membership_status: "pending" | "approved" | "rejected" | "cancelled"
       payment_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
@@ -973,7 +1123,9 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "student", "mentor"],
       feedback_type: ["suggestion", "feedback", "complaint", "question"],
+      group_status: ["draft", "recruiting", "active", "completed", "archived"],
       lesson_type: ["video", "presentation", "text"],
+      membership_status: ["pending", "approved", "rejected", "cancelled"],
       payment_status: ["pending", "approved", "rejected"],
     },
   },

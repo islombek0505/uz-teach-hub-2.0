@@ -58,18 +58,19 @@ export const getLessonPlayback = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const { data: lesson, error } = await supabase
       .from("lessons")
-      .select("id, course_id, bunny_video_id, bunny_library_id, type")
+      .select("id, group_id, bunny_video_id, bunny_library_id, type")
       .eq("id", data.lessonId)
       .maybeSingle();
     if (error) throw error;
     if (!lesson) throw new Error("Lesson topilmadi");
+    if (!lesson.group_id) throw new Error("Forbidden: dars guruhga biriktirilmagan");
 
-    // Access check: admin OR has_course_access
-    const { data: access } = await supabase.rpc("has_course_access", {
+    // Access check: admin OR guruh a'zosi
+    const { data: access } = await supabase.rpc("is_group_member", {
       _user_id: userId,
-      _course_id: lesson.course_id,
+      _group_id: lesson.group_id,
     });
-    if (!access) throw new Error("Forbidden: kursga obuna yo'q");
+    if (!access) throw new Error("Forbidden: guruhga a'zo emassiz");
 
     if (lesson.type !== "video" || !lesson.bunny_video_id) {
       return { embedUrl: null as string | null };

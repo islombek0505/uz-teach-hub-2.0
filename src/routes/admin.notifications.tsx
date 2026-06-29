@@ -7,68 +7,140 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, Megaphone, Send, Users, User as UserIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Trash2, Megaphone, Send, Users, User as UserIcon, Users2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/notifications")({
   component: AdminNotifications,
 });
 
+type Audience = "all" | "one" | "groups";
+
 function AdminNotifications() {
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [audience, setAudience] = useState<"all" | "one">("all");
+  const [audience, setAudience] = useState<Audience>("all");
   const [userId, setUserId] = useState<string>("");
+  const [groupIds, setGroupIds] = useState<string[]>([]);
   const [link, setLink] = useState("");
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["admin", "notifications"],
     queryFn: async () => {
-      const { data, error } = await (supabase.from as any)("notifications").select("*").order("created_at", { ascending: false }).limit(200);
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) throw error;
-      const userIds = Array.from(new Set((data ?? []).map((n: any) => n.user_id).filter(Boolean))) as string[];
-      const { data: profs } = userIds.length
-        ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
-        : { data: [] as any[] };
-      const map = new Map((profs ?? []).map((p: any) => [p.id, p.full_name]));
-      return (data ?? []).map((n: any) => ({ ...n, recipient: n.user_id ? (map.get(n.user_id) || "—") : null }));
+      const rows = data ?? [];
+      const userIds = Array.from(new Set(rows.map((n) => n.user_id).filter(Boolean))) as string[];
+      const gIds = Array.from(new Set(rows.map((n) => n.group_id).filter(Boolean))) as string[];
+      const [{ data: profs }, { data: grps }] = await Promise.all([
+        userIds.length
+          ? supabase.from("profiles").select("id, full_name").in("id", userIds)
+          : Promise.resolve({ data: [] as { id: string; full_name: string | null }[] }),
+        gIds.length
+          ? supabase.from("groups").select("id, name").in("id", gIds)
+          : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+      ]);
+      const pmap = new Map((profs ?? []).map((p) => [p.id, p.full_name]));
+      const gmap = new Map((grps ?? []).map((g) => [g.id, g.name]));
+      return rows.map((n) => ({
+        ...n,
+        recipient: n.user_id ? (pmap.get(n.user_id) ?? "—") : null,
+        groupName: n.group_id ? (gmap.get(n.group_id) ?? "—") : null,
+      }));
     },
   });
 
   const { data: students = [] } = useQuery({
     queryKey: ["admin", "all-students-min"],
     queryFn: async () => {
-      const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "student");
-      const ids = (roles ?? []).map((r: any) => r.user_id);
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "student");
+      const ids = (roles ?? []).map((r) => r.user_id);
       if (!ids.length) return [];
       const { data } = await supabase.from("profiles").select("id, full_name, phone").in("id", ids);
       return data ?? [];
     },
   });
 
+  const { data: groups = [] } = useQuery({
+    queryKey: ["admin", "groups", "min"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("groups")
+        .select("id, name, courses(title)")
+        .order("created_at", { ascending: false });
+      return (data ?? []).map((g) => {
+        const c = g.courses as { title: string } | { title: string }[] | null;
+        const courseTitle = Array.isArray(c) ? (c[0]?.title ?? "") : (c?.title ?? "");
+        return { id: g.id, name: g.name, courseTitle };
+      });
+    },
+  });
+
+  const toggleGroup = (id: string) =>
+    setGroupIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
   const send = useMutation({
     mutationFn: async () => {
       if (!title.trim()) throw new Error("Sarlavhani kiriting");
-      const { data: { user } } = await supabase.auth.getUser();
-      const payload: any = {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const base = {
         title: title.trim(),
         body: body.trim() || null,
-        type: audience === "all" ? "announcement" : "info",
         link: link.trim() || null,
         created_by: user?.id ?? null,
-        user_id: audience === "all" ? null : userId,
       };
-      if (audience === "one" && !userId) throw new Error("Foydalanuvchini tanlang");
-      const { error } = await (supabase.from as any)("notifications").insert(payload);
-      if (error) throw error;
+
+      if (audience === "all") {
+        const { error } = await supabase
+          .from("notifications")
+          .insert({ ...base, type: "announcement", user_id: null, group_id: null });
+        if (error) throw error;
+      } else if (audience === "one") {
+        if (!userId) throw new Error("O'quvchini tanlang");
+        const { error } = await supabase
+          .from("notifications")
+          .insert({ ...base, type: "info", user_id: userId, group_id: null });
+        if (error) throw error;
+      } else {
+        if (groupIds.length === 0) throw new Error("Kamida bitta guruh tanlang");
+        // Fan-out: har bir guruh uchun alohida qator
+        const rows = groupIds.map((gid) => ({
+          ...base,
+          type: "group",
+          user_id: null,
+          group_id: gid,
+        }));
+        const { error } = await supabase.from("notifications").insert(rows);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success("Bildirishnoma yuborildi");
-      setTitle(""); setBody(""); setLink(""); setUserId("");
+      setTitle("");
+      setBody("");
+      setLink("");
+      setUserId("");
+      setGroupIds([]);
       qc.invalidateQueries({ queryKey: ["admin", "notifications"] });
       qc.invalidateQueries({ queryKey: ["notifications"] });
     },
@@ -77,10 +149,13 @@ function AdminNotifications() {
 
   const del = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase.from as any)("notifications").delete().eq("id", id);
+      const { error } = await supabase.from("notifications").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("O'chirildi"); qc.invalidateQueries({ queryKey: ["admin", "notifications"] }); },
+    onSuccess: () => {
+      toast.success("O'chirildi");
+      qc.invalidateQueries({ queryKey: ["admin", "notifications"] });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -91,43 +166,116 @@ function AdminNotifications() {
         <div className="grid gap-6 lg:grid-cols-[420px_1fr]">
           <Card className="h-fit">
             <CardHeader>
-              <CardTitle className="font-display flex items-center gap-2"><Send className="h-4 w-4" /> Yangi bildirishnoma</CardTitle>
+              <CardTitle className="font-display flex items-center gap-2">
+                <Send className="h-4 w-4" /> Yangi bildirishnoma
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Kimga</Label>
-                <Select value={audience} onValueChange={(v) => setAudience(v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select value={audience} onValueChange={(v) => setAudience(v as Audience)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all"><div className="flex items-center gap-2"><Users className="h-4 w-4" /> Hamma o'quvchilarga (e'lon)</div></SelectItem>
-                    <SelectItem value="one"><div className="flex items-center gap-2"><UserIcon className="h-4 w-4" /> Bitta o'quvchiga</div></SelectItem>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" /> Butun platforma (e'lon)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="one">
+                      <div className="flex items-center gap-2">
+                        <UserIcon className="h-4 w-4" /> Bitta o'quvchiga
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="groups">
+                      <div className="flex items-center gap-2">
+                        <Users2 className="h-4 w-4" /> Tanlangan guruh(lar)ga
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
               {audience === "one" && (
                 <div className="space-y-2">
                   <Label>O'quvchi</Label>
                   <Select value={userId} onValueChange={setUserId}>
-                    <SelectTrigger><SelectValue placeholder="Tanlang..." /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tanlang..." />
+                    </SelectTrigger>
                     <SelectContent>
-                      {students.map((s: any) => (
-                        <SelectItem key={s.id} value={s.id}>{s.full_name || s.phone || s.id.slice(0, 8)}</SelectItem>
+                      {students.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.full_name || s.phone || s.id.slice(0, 8)}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
+
+              {audience === "groups" && (
+                <div className="space-y-2">
+                  <Label>Guruhlar ({groupIds.length} tanlandi)</Label>
+                  <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto rounded-lg border p-2">
+                    {groups.length === 0 && (
+                      <p className="p-2 text-sm text-muted-foreground">Guruhlar yo'q</p>
+                    )}
+                    {groups.map((g) => {
+                      const on = groupIds.includes(g.id);
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => toggleGroup(g.id)}
+                          className={cn(
+                            "flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                            on
+                              ? "border-primary bg-primary/10"
+                              : "border-transparent hover:bg-muted",
+                          )}
+                        >
+                          <span className="truncate">
+                            {g.name}
+                            {g.courseTitle ? (
+                              <span className="text-muted-foreground"> · {g.courseTitle}</span>
+                            ) : null}
+                          </span>
+                          {on && <Badge className="shrink-0 text-[10px]">✓</Badge>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Sarlavha</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Masalan: Yangi kurs ochildi!" maxLength={200} />
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Masalan: Darslar boshlanmoqda!"
+                  maxLength={200}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Matn</Label>
-                <Textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Batafsil ma'lumot..." maxLength={2000} />
+                <Textarea
+                  rows={4}
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Batafsil ma'lumot..."
+                  maxLength={2000}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Havola (ixtiyoriy)</Label>
-                <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="/app/courses" />
+                <Input
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder="/app/groups"
+                />
               </div>
               <Button onClick={() => send.mutate()} disabled={send.isPending} className="w-full">
                 <Send className="mr-2 h-4 w-4" /> {send.isPending ? "Yuborilmoqda..." : "Yuborish"}
@@ -137,25 +285,50 @@ function AdminNotifications() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="font-display flex items-center gap-2"><Megaphone className="h-4 w-4" /> Tarix</CardTitle>
+              <CardTitle className="font-display flex items-center gap-2">
+                <Megaphone className="h-4 w-4" /> Tarix
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {isLoading && <div className="text-sm text-muted-foreground">Yuklanmoqda...</div>}
-              {!isLoading && items.length === 0 && <div className="text-sm text-muted-foreground">Hozircha bildirishnomalar yo'q</div>}
-              {items.map((n: any) => (
+              {!isLoading && items.length === 0 && (
+                <div className="text-sm text-muted-foreground">Hozircha bildirishnomalar yo'q</div>
+              )}
+              {items.map((n) => (
                 <div key={n.id} className="flex items-start gap-3 rounded-lg border p-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="font-medium">{n.title}</div>
-                      <Badge variant="outline" className="text-[10px]">{n.type}</Badge>
-                      {n.user_id === null
-                        ? <Badge className="text-[10px]"><Users className="mr-1 h-3 w-3" /> Hammaga</Badge>
-                        : <Badge variant="secondary" className="text-[10px]"><UserIcon className="mr-1 h-3 w-3" /> {n.recipient}</Badge>}
-                      <span className="ml-auto text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString("uz-UZ", { dateStyle: "short", timeStyle: "short" })}</span>
+                      {n.group_id ? (
+                        <Badge className="text-[10px]">
+                          <Users2 className="mr-1 h-3 w-3" /> {n.groupName}
+                        </Badge>
+                      ) : n.user_id === null ? (
+                        <Badge className="text-[10px]">
+                          <Users className="mr-1 h-3 w-3" /> Platforma
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">
+                          <UserIcon className="mr-1 h-3 w-3" /> {n.recipient}
+                        </Badge>
+                      )}
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {new Date(n.created_at).toLocaleString("uz-UZ", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </span>
                     </div>
                     {n.body && <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>}
                   </div>
-                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { if (confirm("O'chirilsinmi?")) del.mutate(n.id); }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm("O'chirilsinmi?")) del.mutate(n.id);
+                    }}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

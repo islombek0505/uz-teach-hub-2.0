@@ -3,15 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   BookOpen,
+  CalendarDays,
   CreditCard,
   MessageSquare,
   User,
   LogOut,
   GraduationCap,
   Bell,
-  Crown,
-  Sparkles,
-  ChevronRight,
 } from "lucide-react";
 import {
   Sidebar,
@@ -44,9 +42,10 @@ type NavItem = {
 
 const items: NavItem[] = [
   { title: "Bosh sahifa", url: "/app", icon: LayoutDashboard, exact: true },
-  { title: "Kurslarim", url: "/app/courses", icon: BookOpen },
+  { title: "Guruhlarim", url: "/app/groups", icon: BookOpen },
+  { title: "Ochiq guruhlar", url: "/app/admissions", icon: CalendarDays },
   { title: "Bildirishnomalar", url: "/app/notifications", icon: Bell, badge: "notif" },
-  { title: "Tarif va to'lov", url: "/app/subscription", icon: CreditCard },
+  { title: "To'lovlar", url: "/app/subscription", icon: CreditCard },
   { title: "Takliflar", url: "/app/feedback", icon: MessageSquare },
   { title: "Profil", url: "/app/profile", icon: User },
 ];
@@ -70,27 +69,8 @@ export function StudentSidebar() {
     },
   });
 
-  const { data: plan } = useQuery({
-    queryKey: ["sidebar", "plan", user?.id],
-    enabled: !!user,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("user_plan")
-        .select("expires_at, is_trial, plans(title)")
-        .eq("user_id", user!.id)
-        .maybeSingle();
-      return data as {
-        expires_at: string | null;
-        is_trial: boolean;
-        plans: { title: string } | null;
-      } | null;
-    },
-  });
-
   const { data: notifs = [] } = useNotifications();
   const unread = notifs.filter((n) => !n.is_read).length;
-
-  const planActive = !!plan && (!plan.expires_at || new Date(plan.expires_at) > new Date());
 
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
@@ -207,44 +187,6 @@ export function StudentSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="gap-2 border-t border-sidebar-border">
-        {/* Subscription status card (hidden when collapsed) */}
-        <Link
-          to="/app/subscription"
-          onClick={closeOnMobile}
-          className={cn(
-            "group/plan relative block overflow-hidden rounded-xl p-3 text-white transition-all group-data-[collapsible=icon]:hidden",
-            planActive ? "ring-1 ring-white/10" : "ring-1 ring-sidebar-primary/40",
-          )}
-          style={{ background: "var(--gradient-primary)" }}
-        >
-          <div
-            className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-white/10 blur-xl transition-transform duration-500 group-hover/plan:scale-150"
-            aria-hidden
-          />
-          <div className="relative flex items-center gap-2.5">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-white/15 ring-1 ring-white/15">
-              {planActive ? <Crown className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold">
-                {planActive
-                  ? plan?.is_trial
-                    ? "Sinov muddati"
-                    : (plan?.plans?.title ?? "Faol tarif")
-                  : "Tarif faol emas"}
-              </div>
-              <div className="truncate text-[11px] text-white/70">
-                {planActive
-                  ? plan?.expires_at
-                    ? `Tugaydi: ${new Date(plan.expires_at).toLocaleDateString("uz-UZ")}`
-                    : "Muddatsiz"
-                  : "Kurslarni ochish uchun bosing"}
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-white/60 transition-transform group-hover/plan:translate-x-0.5" />
-          </div>
-        </Link>
-
         {/* Profile + logout */}
         <Link
           to="/app/profile"

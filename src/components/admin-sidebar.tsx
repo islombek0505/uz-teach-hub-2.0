@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
+  Users2,
   CreditCard,
   MessageSquare,
   Settings,
@@ -13,7 +14,6 @@ import {
   BarChart3,
   Newspaper,
   User,
-  Crown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -50,17 +50,15 @@ const groups: NavGroup[] = [
     label: "Boshqaruv",
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
-      { title: "Kurslar", url: "/admin/courses", icon: BookOpen },
+      { title: "Yo'nalishlar", url: "/admin/courses", icon: BookOpen },
+      { title: "Guruhlar", url: "/admin/groups", icon: Users2 },
       { title: "O'quvchilar", url: "/admin/students", icon: Users },
       { title: "O'quvchilar statistikasi", url: "/admin/student-stats", icon: BarChart3 },
     ],
   },
   {
     label: "Moliya",
-    items: [
-      { title: "Tariflar", url: "/admin/plans", icon: Crown },
-      { title: "To'lovlar", url: "/admin/payments", icon: CreditCard },
-    ],
+    items: [{ title: "To'lovlar", url: "/admin/payments", icon: CreditCard }],
   },
   {
     label: "Tizim",

@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { addMonths } from "@/lib/utils";
 import {
   CheckCircle2,
   X,
@@ -82,7 +81,7 @@ function AdminPayments() {
     queryFn: async () => {
       const { data: pays, error } = await supabase
         .from("payments")
-        .select("*, plans(id, title, duration_days, duration_months)")
+        .select("*, groups(name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       const userIds = Array.from(new Set((pays ?? []).map((p: any) => p.user_id)));
@@ -117,7 +116,9 @@ function AdminPayments() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      const { error: e1 } = await supabase
+      // Access is governed by group membership, not payments — approving a
+      // payment simply records it (and the DB trigger notifies the student).
+      const { error } = await supabase
         .from("payments")
         .update({
           status: "approved",
@@ -125,40 +126,10 @@ function AdminPayments() {
           reviewed_at: new Date().toISOString(),
         })
         .eq("id", p.id);
-      if (e1) throw e1;
-      // extend from current expiry if still active, else from now
-      const { data: current } = await supabase
-        .from("user_plan")
-        .select("expires_at")
-        .eq("user_id", p.user_id)
-        .maybeSingle();
-      const baseTs =
-        current?.expires_at && new Date(current.expires_at).getTime() > Date.now()
-          ? new Date(current.expires_at).getTime()
-          : Date.now();
-      // Calendar-accurate: add whole calendar months when the plan defines them
-      // (so 3 months = exactly 3 months from the start date, not a flat 90 days),
-      // falling back to the legacy fixed day count for older plans.
-      const months = p.plans?.duration_months ?? null;
-      const expires =
-        months && months > 0
-          ? addMonths(new Date(baseTs), months)
-          : new Date(baseTs + (p.plans?.duration_days ?? 30) * 24 * 60 * 60 * 1000);
-      const { error: e2 } = await supabase.from("user_plan").upsert(
-        {
-          user_id: p.user_id,
-          plan_id: p.plan_id,
-          payment_id: p.id,
-          is_trial: false,
-          started_at: new Date().toISOString(),
-          expires_at: expires.toISOString(),
-        },
-        { onConflict: "user_id" },
-      );
-      if (e2) throw e2;
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Tasdiqlandi va tarif faollashtirildi");
+      toast.success("To'lov tasdiqlandi");
       qc.invalidateQueries({ queryKey: ["admin", "payments"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -277,7 +248,7 @@ function AdminPayments() {
                     O'quvchi
                   </TableHead>
                   <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Tarif
+                    Guruh
                   </TableHead>
                   <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
                     Summa
@@ -341,7 +312,17 @@ function AdminPayments() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{p.plans?.title ?? "—"}</TableCell>
+                    <TableCell className="text-sm">
+                      <div className="font-medium">{p.groups?.name ?? "—"}</div>
+                      {p.period_month && (
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(p.period_month).toLocaleDateString("uz-UZ", {
+                            year: "numeric",
+                            month: "long",
+                          })}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap font-display font-semibold tabular-nums">
                       {fmt(Number(p.amount))}
                     </TableCell>

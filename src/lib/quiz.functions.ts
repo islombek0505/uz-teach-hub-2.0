@@ -23,20 +23,21 @@ async function loadLessonWithAccess(
   admin: DbClient,
   userId: string,
   lessonId: string,
-): Promise<{ id: string; course_id: string; pass_threshold: number }> {
+): Promise<{ id: string; group_id: string | null; course_id: string | null; pass_threshold: number }> {
   const { data: lesson, error } = await admin
     .from("lessons")
-    .select("id, course_id, pass_threshold")
+    .select("id, group_id, course_id, pass_threshold")
     .eq("id", lessonId)
     .maybeSingle();
   if (error) throw error;
   if (!lesson) throw new Error("Dars topilmadi");
+  if (!lesson.group_id) throw new Error("Forbidden: dars guruhga biriktirilmagan");
 
-  const { data: access } = await admin.rpc("has_course_access", {
+  const { data: access } = await admin.rpc("is_group_member", {
     _user_id: userId,
-    _course_id: lesson.course_id,
+    _group_id: lesson.group_id,
   });
-  if (!access) throw new Error("Forbidden: kursga obuna yo'q");
+  if (!access) throw new Error("Forbidden: guruhga a'zo emassiz");
   return lesson;
 }
 
@@ -117,6 +118,7 @@ export const submitQuizAttempt = createServerFn({ method: "POST" })
         {
           user_id: userId,
           lesson_id: data.lessonId,
+          group_id: lesson.group_id,
           course_id: lesson.course_id,
           completed: true,
         },

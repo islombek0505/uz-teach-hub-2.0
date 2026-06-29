@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Users, CreditCard, UserX, Shield, Inbox, Calendar } from "lucide-react";
+import { Search, Users, Users2, UserX, Shield, Inbox, Calendar } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,8 +22,7 @@ export const Route = createFileRoute("/admin/students")({
   component: AdminStudents,
 });
 
-const isActivePlan = (plan: any) =>
-  plan && (!plan.expires_at || new Date(plan.expires_at) > new Date());
+const hasGroup = (s: any) => (s?.groupCount ?? 0) > 0;
 
 function AdminStudents() {
   const [q, setQ] = useState("");
@@ -42,28 +41,30 @@ function AdminStudents() {
       );
       const ids = Array.from(new Set((roles ?? []).map((r: any) => r.user_id)));
       if (!ids.length) return [];
-      const [{ data: profs }, { data: plans }] = await Promise.all([
+      const [{ data: profs }, { data: members }] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, full_name, phone, avatar_url, created_at")
           .in("id", ids),
         supabase
-          .from("user_plan")
-          .select("user_id, expires_at, is_trial, plans(title)")
+          .from("group_members")
+          .select("user_id")
+          .eq("status", "approved")
           .in("user_id", ids),
       ]);
-      const pMap = new Map<string, any>();
-      for (const p of (plans ?? []) as any[]) pMap.set(p.user_id, p);
+      const countMap = new Map<string, number>();
+      for (const m of (members ?? []) as any[])
+        countMap.set(m.user_id, (countMap.get(m.user_id) ?? 0) + 1);
       return (profs ?? []).map((p: any) => ({
         ...p,
-        plan: pMap.get(p.id) ?? null,
+        groupCount: countMap.get(p.id) ?? 0,
         is_admin: adminSet.has(p.id),
       }));
     },
   });
 
   const summary = useMemo(() => {
-    const active = students.filter((s: any) => isActivePlan(s.plan)).length;
+    const active = students.filter((s: any) => hasGroup(s)).length;
     const admins = students.filter((s: any) => s.is_admin).length;
     return { total: students.length, active, inactive: students.length - active, admins };
   }, [students]);
@@ -76,7 +77,7 @@ function AdminStudents() {
         !((s.full_name ?? "").toLowerCase().includes(term) || (s.phone ?? "").includes(term))
       )
         return false;
-      const active = isActivePlan(s.plan);
+      const active = hasGroup(s);
       if (tab === "active" && !active) return false;
       if (tab === "inactive" && active) return false;
       if (tab === "admins" && !s.is_admin) return false;
@@ -93,14 +94,14 @@ function AdminStudents() {
       chip: "bg-primary/10",
     },
     {
-      label: "Faol obunalar",
+      label: "Guruhdagilar",
       value: String(summary.active),
-      icon: CreditCard,
+      icon: Users2,
       tint: "text-success",
       chip: "bg-success/15",
     },
     {
-      label: "Tarifsiz",
+      label: "Guruhsiz",
       value: String(summary.inactive),
       icon: UserX,
       tint: "text-warning",
@@ -117,8 +118,8 @@ function AdminStudents() {
 
   const tabs = [
     { value: "all", label: "Hammasi", count: summary.total },
-    { value: "active", label: "Faol", count: summary.active },
-    { value: "inactive", label: "Tarifsiz", count: summary.inactive },
+    { value: "active", label: "Guruhda", count: summary.active },
+    { value: "inactive", label: "Guruhsiz", count: summary.inactive },
     { value: "admins", label: "Adminlar", count: summary.admins },
   ];
 
@@ -176,10 +177,7 @@ function AdminStudents() {
                     O'quvchi
                   </TableHead>
                   <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Tarif
-                  </TableHead>
-                  <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Tugash sanasi
+                    Guruhlar
                   </TableHead>
                   <TableHead className="text-xs uppercase tracking-wide text-muted-foreground">
                     Ro'yxatdan
@@ -192,14 +190,14 @@ function AdminStudents() {
               <TableBody>
                 {isLoading && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="py-12 text-center text-muted-foreground">
                       Yuklanmoqda...
                     </TableCell>
                   </TableRow>
                 )}
                 {!isLoading && filtered.length === 0 && (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={5} className="py-12">
+                    <TableCell colSpan={4} className="py-12">
                       <div className="flex flex-col items-center gap-2 text-center">
                         <div className="grid h-12 w-12 place-items-center rounded-full bg-muted">
                           <Inbox className="h-5 w-5 text-muted-foreground" />
@@ -216,8 +214,7 @@ function AdminStudents() {
                     .join("")
                     .slice(0, 2)
                     .toUpperCase();
-                  const active = isActivePlan(s.plan);
-                  const planLabel = s.plan?.is_trial ? "Sinov" : (s.plan?.plans?.title ?? null);
+                  const active = hasGroup(s);
                   return (
                     <TableRow key={s.id} className="border-border/60">
                       <TableCell>
@@ -244,18 +241,13 @@ function AdminStudents() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {active && planLabel ? (
+                        {s.groupCount > 0 ? (
                           <Badge variant="secondary" className="font-normal">
-                            {planLabel}
+                            {s.groupCount} ta guruh
                           </Badge>
                         ) : (
                           <span className="text-sm text-muted-foreground">—</span>
                         )}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                        {s.plan?.expires_at
-                          ? new Date(s.plan.expires_at).toLocaleDateString("uz-UZ")
-                          : "—"}
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                         <span className="inline-flex items-center gap-1.5">
@@ -266,12 +258,12 @@ function AdminStudents() {
                       <TableCell className="text-right">
                         {active ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-success/15 px-2.5 py-1 text-xs font-medium text-success">
-                            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Faol
+                            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Guruhda
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                             <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />{" "}
-                            Tarifsiz
+                            Guruhsiz
                           </span>
                         )}
                       </TableCell>

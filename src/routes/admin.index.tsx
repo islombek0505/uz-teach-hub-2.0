@@ -5,10 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users,
-  CreditCard,
+  Users2,
   DollarSign,
   BookOpen,
   AlertCircle,
+  Inbox,
   LayoutDashboard,
   ArrowRight,
   ArrowUpRight,
@@ -29,37 +30,33 @@ function AdminDashboard() {
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
-      const [studentsRes, plansRes, coursesRes, lessonsRes, payRes, pendingRes] = await Promise.all(
-        [
-          supabase
-            .from("user_roles")
-            .select("user_id", { count: "exact", head: true })
-            .eq("role", "student"),
-          supabase
-            .from("user_plan")
-            .select("user_id", { count: "exact", head: true })
-            .gt("expires_at", new Date().toISOString()),
-          supabase.from("courses").select("id", { count: "exact", head: true }),
-          supabase.from("lessons").select("id", { count: "exact", head: true }),
-          supabase
-            .from("payments")
-            .select("amount")
-            .eq("status", "approved")
-            .gte("created_at", monthStart.toISOString()),
-          supabase
-            .from("payments")
-            .select("id, amount, payer_name, user_id, plans(title)")
-            .eq("status", "pending")
-            .order("created_at", { ascending: false })
-            .limit(5),
-        ],
-      );
+      const [studentsRes, groupsRes, requestsRes, payRes, pendingRes] = await Promise.all([
+        supabase
+          .from("user_roles")
+          .select("user_id", { count: "exact", head: true })
+          .eq("role", "student"),
+        supabase.from("groups").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase
+          .from("group_members")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+        supabase
+          .from("payments")
+          .select("amount")
+          .eq("status", "approved")
+          .gte("created_at", monthStart.toISOString()),
+        supabase
+          .from("payments")
+          .select("id, amount, payer_name, user_id, groups(name)")
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
       const revenue = (payRes.data ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
       return {
         students: studentsRes.count ?? 0,
-        active: plansRes.count ?? 0,
-        courses: coursesRes.count ?? 0,
-        lessons: lessonsRes.count ?? 0,
+        activeGroups: groupsRes.count ?? 0,
+        pendingRequests: requestsRes.count ?? 0,
         revenue,
         pending: pendingRes.data ?? [],
       };
@@ -72,14 +69,14 @@ function AdminDashboard() {
       value: data?.students ?? "—",
       icon: Users,
       color: "text-primary bg-primary/10",
-      hint: "Faol foydalanuvchilar",
+      hint: "Ro'yxatdan o'tganlar",
     },
     {
-      label: "Faol obunalar",
-      value: data?.active ?? "—",
-      icon: CreditCard,
+      label: "Faol guruhlar",
+      value: data?.activeGroups ?? "—",
+      icon: Users2,
       color: "text-success bg-success/15",
-      hint: "To'lov qilganlar",
+      hint: "Darslar ketmoqda",
     },
     {
       label: "Oylik daromad",
@@ -89,12 +86,11 @@ function AdminDashboard() {
       hint: "Shu oy uchun",
     },
     {
-      label: "Kurslar",
-      value: data?.courses ?? "—",
-      icon: BookOpen,
+      label: "Kutilayotgan so'rovlar",
+      value: data?.pendingRequests ?? "—",
+      icon: Inbox,
       color: "text-accent-foreground bg-accent/40",
-      trend: data ? `${data.lessons} dars` : undefined,
-      hint: "Jami kurslar",
+      hint: "Guruhga qo'shilish",
     },
   ];
 
@@ -129,8 +125,8 @@ function AdminDashboard() {
                 variant="secondary"
                 className="border-white/20 bg-white/10 text-white hover:bg-white/20"
               >
-                <Link to="/admin/courses">
-                  <BookOpen className="mr-1 h-4 w-4" /> Kurslar
+                <Link to="/admin/groups">
+                  <BookOpen className="mr-1 h-4 w-4" /> Guruhlar
                 </Link>
               </Button>
               <Button asChild className="bg-white text-primary shadow-lg hover:bg-white/90">
@@ -151,15 +147,9 @@ function AdminDashboard() {
                   <div className={`grid h-11 w-11 place-items-center rounded-xl ${s.color}`}>
                     <s.icon className="h-5 w-5" />
                   </div>
-                  {s.trend ? (
-                    <Badge variant="outline" className="text-xs">
-                      {s.trend}
-                    </Badge>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                      <ArrowUpRight className="h-3.5 w-3.5" /> {s.hint}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                    <ArrowUpRight className="h-3.5 w-3.5" /> {s.hint}
+                  </span>
                 </div>
                 <div className="mt-4 font-display text-3xl font-bold tracking-tight">{s.value}</div>
                 <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
@@ -197,7 +187,7 @@ function AdminDashboard() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">
-                    {p.payer_name ?? "—"} — {p.plans?.title ?? "—"}
+                    {p.payer_name ?? "—"} — {p.groups?.name ?? "—"}
                   </div>
                   <div className="text-xs text-muted-foreground">{fmt(Number(p.amount))}</div>
                 </div>

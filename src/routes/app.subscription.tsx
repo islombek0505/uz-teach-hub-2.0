@@ -1,10 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Topbar } from "@/components/topbar";
-import { PageHeader } from "@/components/page-header";
-import { planDurationLabel } from "@/lib/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
   CreditCard,
@@ -17,17 +13,18 @@ import {
   Youtube,
   Facebook,
   MessageCircle,
-  Crown,
   Upload,
-  Sparkles,
+  Clock,
+  CalendarDays,
+  Inbox,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { activateTrial as activateTrialFn } from "@/lib/subscription.functions";
-import { useState } from "react";
+import { Topbar } from "@/components/topbar";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -39,16 +36,52 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPrice, pricePeriodLabel, type MembershipStatus } from "@/lib/groups";
 
 export const Route = createFileRoute("/app/subscription")({
-  component: SubscriptionPage,
+  component: PaymentsPage,
 });
 
-const fmt = (n: number) => new Intl.NumberFormat("uz-UZ").format(n) + " so'm";
+const UZ_MONTHS = [
+  "Yanvar",
+  "Fevral",
+  "Mart",
+  "Aprel",
+  "May",
+  "Iyun",
+  "Iyul",
+  "Avgust",
+  "Sentyabr",
+  "Oktyabr",
+  "Noyabr",
+  "Dekabr",
+];
 
-function SubscriptionPage() {
+function monthLabel(value: string | null): string {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${d.getFullYear()}-yil ${UZ_MONTHS[d.getMonth()]}`;
+}
+
+function currentPeriodMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+type ActiveGroup = {
+  id: string;
+  name: string;
+  price: number;
+  price_period: string;
+  courseTitle: string;
+};
+
+function PaymentsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
+  const periodMonth = currentPeriodMonth();
+
   const copy = (t: string) => {
     navigator.clipboard.writeText(t);
     toast.success("Nusxa olindi");
@@ -56,60 +89,64 @@ function SubscriptionPage() {
 
   const { data } = useQuery({
     enabled: !!user,
-    queryKey: ["app", "subscription", user?.id],
+    queryKey: ["app", "payments", user?.id],
     queryFn: async () => {
-      const [
-        { data: plans },
-        { data: userPlan },
-        { data: profile },
-        { data: payments },
-        { data: cards },
-        { data: channels },
-      ] = await Promise.all([
-        supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
-        supabase
-          .from("user_plan")
-          .select("*, plans(title, duration_days)")
-          .eq("user_id", user!.id)
-          .maybeSingle(),
-        supabase.from("profiles").select("trial_activated_at").eq("id", user!.id).maybeSingle(),
-        supabase
-          .from("payments")
-          .select("id, amount, status, created_at, admin_note, plans(title)")
-          .eq("user_id", user!.id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("payment_cards" as any)
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order"),
-        supabase
-          .from("contact_channels" as any)
-          .select("*")
-          .eq("is_active", true)
-          .order("sort_order"),
+      const { data: memberships } = await supabase
+        .from("group_members")
+        .select("groups(id, name, price, price_period, status, courses(title))")
+        .eq("user_id", user!.id)
+        .eq("status", "approved" as MembershipStatus);
+
+      const activeGroups: ActiveGroup[] = (memberships ?? [])
+        .map((m) => {
+          const g = m.groups as {
+            id: string;
+            name: string;
+            price: number;
+            price_period: string;
+            status: string;
+            courses: { title: string } | { title: string }[] | null;
+          } | null;
+          if (!g || g.status !== "active") return null;
+          const c = g.courses;
+          const courseTitle = Array.isArray(c) ? (c[0]?.title ?? "—") : (c?.title ?? "—");
+          return {
+            id: g.id,
+            name: g.name,
+            price: g.price,
+            price_period: g.price_period,
+            courseTitle,
+          };
+        })
+        .filter((g): g is ActiveGroup => !!g);
+
+      const { data: payments } = await supabase
+        .from("payments")
+        .select("id, amount, status, created_at, period_month, group_id, groups(name)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+
+      const [{ data: cards }, { data: channels }] = await Promise.all([
+        supabase.from("payment_cards").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("contact_channels").select("*").eq("is_active", true).order("sort_order"),
       ]);
+
+      // Joriy oy uchun guruh bo'yicha to'lov holati
+      const thisMonth = new Map<string, MembershipStatus>();
+      for (const p of payments ?? []) {
+        if (p.period_month === periodMonth && p.group_id && p.status !== "rejected") {
+          thisMonth.set(p.group_id, p.status as MembershipStatus);
+        }
+      }
+
       return {
-        plans: plans ?? [],
-        userPlan: userPlan as any,
-        profile: profile as any,
+        activeGroups,
         payments: payments ?? [],
-        cards: (cards ?? []) as any[],
-        channels: (channels ?? []) as any[],
+        cards: cards ?? [],
+        channels: channels ?? [],
+        thisMonth,
       };
     },
-  });
-
-  const runActivateTrial = useServerFn(activateTrialFn);
-  const activateTrial = useMutation({
-    mutationFn: async () => {
-      await runActivateTrial({});
-    },
-    onSuccess: () => {
-      toast.success("Sinov muddati aktivlashtirildi!");
-      qc.invalidateQueries({ queryKey: ["app", "subscription"] });
-    },
-    onError: (e: Error) => toast.error(e.message),
   });
 
   const iconFor = (type: string) =>
@@ -123,122 +160,100 @@ function SubscriptionPage() {
         website: Globe,
         youtube: Youtube,
         facebook: Facebook,
-      }) as any
+      }) as Record<string, typeof Phone>
     )[type] ?? Phone;
 
-  const userPlan = data?.userPlan;
-  const planActive =
-    !!userPlan && (!userPlan.expires_at || new Date(userPlan.expires_at) > new Date());
-  const trialUsed = !!data?.profile?.trial_activated_at;
+  const activeGroups = data?.activeGroups ?? [];
+  const thisMonth = data?.thisMonth ?? new Map<string, MembershipStatus>();
+  const cards = data?.cards ?? [];
 
   return (
     <>
-      <Topbar title="Tarif va to'lov" />
+      <Topbar title="To'lovlar" />
       <main className="animate-fade-rise flex-1 space-y-6 p-4 lg:p-6">
-        <PageHeader
-          // icon={Crown}
-          title="Tarif va to'lov"
-          subtitle="Barcha kurslarga to'liq kirish uchun tarif sotib oling"
-        />
-
-        {/* Current status */}
-        <Card
-          className="overflow-hidden rounded-2xl border-0 text-primary-foreground shadow-sm"
-          style={{ background: planActive ? "var(--gradient-hero)" : "var(--gradient-primary)" }}
-        >
-          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              {/* <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white/15">
-                <Crown className="h-6 w-6" />
-              </div> */}
-              <div>
-                <div className="font-display text-lg font-semibold">
-                  {planActive
-                    ? userPlan.is_trial
-                      ? "Sinov muddati faol"
-                      : (userPlan.plans?.title ?? "Tarif faol")
-                    : "Akkountingiz tarifsiz"}
-                </div>
-                <div className="mt-0.5 text-sm text-white/75">
-                  {planActive
-                    ? `Tugaydi: ${userPlan.expires_at ? new Date(userPlan.expires_at).toLocaleDateString("uz-UZ") : "muddatsiz"}`
-                    : "Video darslarni ko'rish uchun tarif sotib oling"}
-                </div>
-              </div>
-            </div>
-            {!planActive && !trialUsed && (
-              <Button
-                onClick={() => activateTrial.mutate()}
-                disabled={activateTrial.isPending}
-                className="bg-white text-primary hover:bg-white/90"
-              >
-                <Sparkles className="mr-2 h-4 w-4" /> 1 haftalik bepul sinov
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Plans */}
         <div>
-          <h3 className="mb-4 font-display text-xl font-semibold">Tariflarni tanlang</h3>
-          {(data?.plans ?? []).length === 0 && (
-            <div className="text-sm text-muted-foreground">Hozircha tariflar yo'q.</div>
+          <h2 className="font-display text-xl font-semibold">To'lovlar</h2>
+          <p className="text-sm text-muted-foreground">
+            Siz a'zo bo'lgan va darslari boshlangan guruhlar uchun oylik to'lov.
+          </p>
+        </div>
+
+        {/* Joriy oy to'lovlari */}
+        <div>
+          <h3 className="mb-3 font-display text-lg font-semibold">
+            Joriy oy to'lovi · {monthLabel(periodMonth)}
+          </h3>
+
+          {activeGroups.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center gap-2 p-8 text-center text-muted-foreground">
+                <Inbox className="h-8 w-8 opacity-40" />
+                <p>
+                  Hozircha to'lov talab qilinmaydi. Darslar boshlangan guruhga biriktirilganingizdan
+                  so'ng bu yerda oylik to'lov chiqadi.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/app/groups">Guruhlarim</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {activeGroups.map((g) => {
+                const status = thisMonth.get(g.id);
+                return (
+                  <Card key={g.id} className="overflow-hidden">
+                    <CardContent className="space-y-3 p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary">{g.courseTitle}</Badge>
+                      </div>
+                      <div>
+                        <h4 className="font-display text-lg font-semibold">{g.name}</h4>
+                        <div className="mt-1 font-display text-2xl font-bold tracking-tight">
+                          {formatPrice(g.price)}
+                          <span className="ml-1 text-sm font-normal text-muted-foreground">
+                            / {pricePeriodLabel(g.price_period)}
+                          </span>
+                        </div>
+                      </div>
+                      {status === "approved" ? (
+                        <div className="inline-flex items-center gap-1.5 text-sm font-medium text-success">
+                          <CheckCircle2 className="h-4 w-4" /> Bu oy uchun to'langan
+                        </div>
+                      ) : status === "pending" ? (
+                        <div className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-600">
+                          <Clock className="h-4 w-4" /> To'lov tekshirilmoqda
+                        </div>
+                      ) : (
+                        <PayDialog
+                          group={g}
+                          userId={user!.id}
+                          periodMonth={periodMonth}
+                          periodLabel={monthLabel(periodMonth)}
+                          cards={cards}
+                          onDone={() => qc.invalidateQueries({ queryKey: ["app", "payments"] })}
+                        />
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           )}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(data?.plans ?? []).map((p: any, i: number) => {
-              const popular = i === 1;
-              return (
-                <Card
-                  key={p.id}
-                  className={`relative rounded-2xl shadow-sm transition-all hover:-translate-y-1 hover:shadow-md ${
-                    popular ? "border-2 border-primary" : "border-border/60"
-                  }`}
-                >
-                  {popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground shadow-sm">
-                        Ommabop
-                      </Badge>
-                    </div>
-                  )}
-                  <CardContent className="space-y-3 p-5">
-                    <div className="font-display text-lg font-semibold">{p.title}</div>
-                    <div className="font-display text-3xl font-bold tracking-tight">
-                      {fmt(Number(p.price))}
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                      {planDurationLabel(p)} · barcha kurslarga ruxsat
-                    </div>
-                    {p.description && (
-                      <p className="text-sm text-muted-foreground">{p.description}</p>
-                    )}
-                    <PayDialog
-                      plan={p}
-                      userId={user!.id}
-                      cards={data?.cards ?? []}
-                      popular={popular}
-                      onDone={() => qc.invalidateQueries({ queryKey: ["app", "subscription"] })}
-                    />
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Payment details */}
+          {/* To'lov uchun ma'lumotlar */}
           <Card className="glass rounded-2xl border-transparent">
             <CardContent className="p-5 lg:p-6">
               <h3 className="mb-4 font-display text-lg font-semibold">To'lov uchun ma'lumotlar</h3>
               <div className="space-y-4">
-                {(data?.cards ?? []).length === 0 && (
+                {cards.length === 0 && (
                   <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
                     To'lov kartalari sozlanmagan.
                   </div>
                 )}
-                {(data?.cards ?? []).map((c: any) => (
+                {cards.map((c) => (
                   <div key={c.id} className="rounded-xl border border-border/60 bg-muted/30 p-4">
                     <div className="text-xs uppercase text-muted-foreground">
                       {c.label}
@@ -262,7 +277,7 @@ function SubscriptionPage() {
 
                 {(data?.channels ?? []).length > 0 && (
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {(data?.channels ?? []).map((c: any) => {
+                    {(data?.channels ?? []).map((c) => {
                       const Icon = iconFor(c.type);
                       return (
                         <a
@@ -288,7 +303,7 @@ function SubscriptionPage() {
             </CardContent>
           </Card>
 
-          {/* Payment history */}
+          {/* To'lovlar tarixi */}
           <Card className="glass rounded-2xl border-transparent">
             <CardContent className="p-5 lg:p-6">
               <h3 className="mb-4 font-display text-lg font-semibold">To'lovlar tarixi</h3>
@@ -298,43 +313,40 @@ function SubscriptionPage() {
                     To'lovlar tarixi bo'sh
                   </div>
                 )}
-                {(data?.payments ?? []).map((p: any) => (
-                  <div key={p.id} className="rounded-xl border border-border/60 p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-                        <CreditCard className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium">{fmt(Number(p.amount))}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {p.plans?.title ?? "-"} ·{" "}
-                          {new Date(p.created_at).toLocaleDateString("uz-UZ")}
+                {(data?.payments ?? []).map((p) => {
+                  const grp = p.groups as { name: string } | { name: string }[] | null;
+                  const groupName = Array.isArray(grp) ? (grp[0]?.name ?? "—") : (grp?.name ?? "—");
+                  return (
+                    <div key={p.id} className="rounded-xl border border-border/60 p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <CreditCard className="h-5 w-5" />
                         </div>
-                      </div>
-                      <Badge
-                        className={
-                          p.status === "approved"
-                            ? "bg-success text-success-foreground"
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium">{formatPrice(Number(p.amount))}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {groupName} · {monthLabel(p.period_month)}
+                          </div>
+                        </div>
+                        <Badge
+                          className={
+                            p.status === "approved"
+                              ? "bg-success text-success-foreground"
+                              : p.status === "rejected"
+                                ? "bg-destructive text-destructive-foreground"
+                                : "bg-warning text-warning-foreground"
+                          }
+                        >
+                          {p.status === "approved"
+                            ? "Tasdiqlangan"
                             : p.status === "rejected"
-                              ? "bg-destructive text-destructive-foreground"
-                              : "bg-warning text-warning-foreground"
-                        }
-                      >
-                        {p.status === "approved"
-                          ? "Tasdiqlangan"
-                          : p.status === "rejected"
-                            ? "Rad etilgan"
-                            : "Kutilmoqda"}
-                      </Badge>
-                    </div>
-                    {p.status === "rejected" && p.admin_note && (
-                      <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                        <span className="font-medium">Rad etish sababi: </span>
-                        {p.admin_note}
+                              ? "Rad etilgan"
+                              : "Kutilmoqda"}
+                        </Badge>
                       </div>
-                    )}
-                  </div>
-                ))}
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -345,16 +357,24 @@ function SubscriptionPage() {
 }
 
 function PayDialog({
-  plan,
+  group,
   userId,
+  periodMonth,
+  periodLabel,
   cards,
-  popular,
   onDone,
 }: {
-  plan: any;
+  group: ActiveGroup;
   userId: string;
-  cards: any[];
-  popular?: boolean;
+  periodMonth: string;
+  periodLabel: string;
+  cards: Array<{
+    id: string;
+    label: string;
+    bank: string | null;
+    card_number: string;
+    holder_name: string;
+  }>;
   onDone: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -364,37 +384,28 @@ function PayDialog({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      toast.error("Chek rasmini yuklang — bu majburiy");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Fayl 5MB dan kichik bo'lsin");
-      return;
-    }
+    if (!file) return toast.error("Chek rasmini yuklang — bu majburiy");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Fayl 5MB dan kichik bo'lsin");
     const okType =
       file.type.startsWith("image/") ||
       file.type === "application/pdf" ||
       /\.(jpe?g|png|gif|webp|bmp|heic|heif|avif|pdf)$/i.test(file.name);
-    if (!okType) {
-      toast.error("Faqat rasm yoki PDF yuklang");
-      return;
-    }
+    if (!okType) return toast.error("Faqat rasm yoki PDF yuklang");
     setBusy(true);
     try {
       const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${userId}/${plan.id}/${Date.now()}.${ext}`;
+      const path = `${userId}/${group.id}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("receipts")
         .upload(path, file, { upsert: false, contentType: file.type || undefined });
       if (upErr) throw upErr;
-      const receipt_url = path;
       const { error } = await supabase.from("payments").insert({
         user_id: userId,
-        plan_id: plan.id,
-        amount: plan.price,
+        group_id: group.id,
+        period_month: periodMonth,
+        amount: group.price,
         note: note || null,
-        receipt_url,
+        receipt_url: path,
         status: "pending",
       });
       if (error) throw error;
@@ -403,8 +414,8 @@ function PayDialog({
       setOpen(false);
       setFile(null);
       setNote("");
-    } catch (err: any) {
-      toast.error(err.message ?? "Xatolik");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Xatolik");
     } finally {
       setBusy(false);
     }
@@ -413,13 +424,15 @@ function PayDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full" variant={popular ? "default" : "outline"}>
-          <CreditCard className="mr-2 h-4 w-4" /> Sotib olish
+        <Button className="w-full">
+          <CreditCard className="mr-2 h-4 w-4" /> To'lash
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-display">{plan.title} — to'lov</DialogTitle>
+          <DialogTitle className="font-display">
+            {group.name} — {periodLabel}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           {cards.length > 0 && (
@@ -438,7 +451,7 @@ function PayDialog({
           )}
           <div className="space-y-2">
             <Label>Summa</Label>
-            <Input value={fmt(Number(plan.price))} disabled />
+            <Input value={formatPrice(group.price)} disabled />
           </div>
           <div className="space-y-2">
             <Label>
@@ -455,16 +468,9 @@ function PayDialog({
                 type="file"
                 accept="image/*,application/pdf"
                 className="hidden"
-                required
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               />
             </label>
-            {!file && (
-              <p className="text-xs text-muted-foreground">
-                To'lovni tasdiqlash uchun chek majburiy. Faqat rasm (JPG/PNG) yoki PDF — 5MB
-                gacha.
-              </p>
-            )}
           </div>
           <div className="space-y-2">
             <Label>Eslatma (ixtiyoriy)</Label>
