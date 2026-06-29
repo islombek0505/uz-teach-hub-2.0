@@ -12,6 +12,7 @@ import {
   Lock,
 } from "lucide-react";
 import { Topbar } from "@/components/topbar";
+import { LeaveRequestDialog } from "@/components/student/leave-request-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +69,7 @@ function GroupDetail() {
 
       const { data: membership } = await supabase
         .from("group_members")
-        .select("status")
+        .select("*")
         .eq("group_id", groupId)
         .eq("user_id", user!.id)
         .maybeSingle();
@@ -98,6 +99,8 @@ function GroupDetail() {
       return {
         group: { ...group, courseTitle },
         isMember: membership?.status === ("approved" as MembershipStatus),
+        membershipId: membership?.id ?? null,
+        leaveRequestedAt: membership?.leave_requested_at ?? null,
         modules,
         completedSet,
       };
@@ -108,7 +111,7 @@ function GroupDetail() {
     return <main className="flex-1 p-6 text-muted-foreground">Yuklanmoqda...</main>;
   }
 
-  const { group, isMember, modules, completedSet } = data;
+  const { group, isMember, membershipId, leaveRequestedAt, modules, completedSet } = data;
   const status = group.status as GroupStatus;
   const allLessons = modules.flatMap((m) => m.lessons);
   const total = allLessons.length;
@@ -143,13 +146,23 @@ function GroupDetail() {
                 <BookOpen className="h-4 w-4" /> {total} dars
               </span>
             </div>
-            {group.telegram_link && (
-              <Button asChild variant="outline" size="sm">
-                <a href={group.telegram_link} target="_blank" rel="noreferrer">
-                  <Send className="mr-2 h-4 w-4" /> Telegram guruhga qo'shilish
-                </a>
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {group.telegram_link && (
+                <Button asChild variant="outline" size="sm">
+                  <a href={group.telegram_link} target="_blank" rel="noreferrer">
+                    <Send className="mr-2 h-4 w-4" /> Telegram guruhga qo'shilish
+                  </a>
+                </Button>
+              )}
+              {isMember && status === "active" && membershipId && (
+                <LeaveRequestDialog
+                  membershipId={membershipId}
+                  groupName={group.name}
+                  leaveRequested={!!leaveRequestedAt}
+                  invalidateKeys={[["app", "group-detail", groupId]]}
+                />
+              )}
+            </div>
           </CardContent>
         </Card>
 

@@ -167,6 +167,8 @@ export type Database = {
           decided_by: string | null
           group_id: string
           id: string
+          leave_note: string | null
+          leave_requested_at: string | null
           requested_at: string
           status: Database["public"]["Enums"]["membership_status"]
           updated_at: string
@@ -178,6 +180,8 @@ export type Database = {
           decided_by?: string | null
           group_id: string
           id?: string
+          leave_note?: string | null
+          leave_requested_at?: string | null
           requested_at?: string
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string
@@ -189,6 +193,8 @@ export type Database = {
           decided_by?: string | null
           group_id?: string
           id?: string
+          leave_note?: string | null
+          leave_requested_at?: string | null
           requested_at?: string
           status?: Database["public"]["Enums"]["membership_status"]
           updated_at?: string

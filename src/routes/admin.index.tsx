@@ -53,12 +53,29 @@ function AdminDashboard() {
           .limit(5),
       ]);
       const revenue = (payRes.data ?? []).reduce((s, p: any) => s + Number(p.amount ?? 0), 0);
+
+      // To'lov arizalarida o'quvchi ismini ko'rsatish (payer_name guruh to'lovlarida bo'sh)
+      const pendingRows = pendingRes.data ?? [];
+      const payerIds = Array.from(new Set(pendingRows.map((p) => p.user_id).filter(Boolean)));
+      const nameById = new Map<string, string>();
+      if (payerIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", payerIds);
+        for (const pr of profs ?? []) nameById.set(pr.id, pr.full_name ?? "");
+      }
+      const pending = pendingRows.map((p) => ({
+        ...p,
+        payerName: nameById.get(p.user_id) || p.payer_name || "—",
+      }));
+
       return {
         students: studentsRes.count ?? 0,
         activeGroups: groupsRes.count ?? 0,
         pendingRequests: requestsRes.count ?? 0,
         revenue,
-        pending: pendingRes.data ?? [],
+        pending,
       };
     },
   });
@@ -187,7 +204,7 @@ function AdminDashboard() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">
-                    {p.payer_name ?? "—"} — {p.groups?.name ?? "—"}
+                    {p.payerName} — {p.groups?.name ?? "—"}
                   </div>
                   <div className="text-xs text-muted-foreground">{fmt(Number(p.amount))}</div>
                 </div>

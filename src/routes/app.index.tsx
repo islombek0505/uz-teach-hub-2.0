@@ -11,10 +11,12 @@ import { NewsCarousel } from "@/components/news-carousel";
 import { DashboardSkeleton } from "@/components/student/loaders";
 import {
   GROUP_STATUS,
+  GROUP_STATUS_COLOR,
   formatSchedule,
   type GroupStatus,
   type MembershipStatus,
 } from "@/lib/groups";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -231,7 +233,12 @@ function Dashboard() {
               <CardContent className="divide-y p-0">
                 {activeGroups.map((g) => (
                   <div key={g.id} className="flex items-center gap-3 p-4">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <div
+                      className={cn(
+                        "grid h-10 w-10 shrink-0 place-items-center rounded-lg border",
+                        GROUP_STATUS_COLOR[g.status].chip,
+                      )}
+                    >
                       <CalendarDays className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, X, UserPlus, Search, Trash2, Clock, Users } from "lucide-react";
+import { Check, X, UserPlus, Search, Trash2, Clock, Users, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,8 @@ type MemberRow = {
   status: MembershipStatus;
   requested_at: string;
   decided_at: string | null;
+  leaveRequestedAt: string | null;
+  leaveNote: string | null;
   full_name: string;
   phone: string | null;
   avatar_url: string | null;
@@ -46,7 +49,7 @@ export function GroupMembersManager({ groupId, capacity }: { groupId: string; ca
     queryFn: async () => {
       const { data, error } = await supabase
         .from("group_members")
-        .select("id, user_id, status, requested_at, decided_at")
+        .select("*")
         .eq("group_id", groupId)
         .order("requested_at", { ascending: true });
       if (error) throw error;
@@ -69,6 +72,8 @@ export function GroupMembersManager({ groupId, capacity }: { groupId: string; ca
         status: r.status,
         requested_at: r.requested_at,
         decided_at: r.decided_at,
+        leaveRequestedAt: r.leave_requested_at ?? null,
+        leaveNote: r.leave_note ?? null,
         full_name: byId.get(r.user_id)?.full_name ?? "Foydalanuvchi",
         phone: byId.get(r.user_id)?.phone ?? null,
         avatar_url: byId.get(r.user_id)?.avatar_url ?? null,
@@ -90,6 +95,22 @@ export function GroupMembersManager({ groupId, capacity }: { groupId: string; ca
       if (error) throw error;
     },
     onSuccess: invalidate,
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  // Chiqish so'rovini rad etish (a'zo guruhda qoladi)
+  const rejectLeave = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("group_members")
+        .update({ leave_requested_at: null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Chiqish so'rovi rad etildi");
+      invalidate();
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -288,20 +309,45 @@ export function GroupMembersManager({ groupId, capacity }: { groupId: string; ca
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{m.full_name}</p>
                   <p className="truncate text-xs text-muted-foreground">{m.phone ?? "—"}</p>
+                  {m.leaveRequestedAt && (
+                    <div className="mt-1 space-y-1">
+                      <Badge variant="outline" className="gap-1 text-amber-600">
+                        <LogOut className="h-3 w-3" /> Chiqishni so'radi
+                      </Badge>
+                      {m.leaveNote && (
+                        <p className="text-xs italic text-muted-foreground">"{m.leaveNote}"</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="shrink-0 text-destructive"
-                disabled={setStatus.isPending}
-                onClick={() =>
-                  confirm(`${m.full_name} ni guruhdan chiqarasizmi?`) &&
-                  setStatus.mutate({ id: m.id, status: "cancelled" })
-                }
-              >
-                <Trash2 className="mr-1 h-4 w-4" /> Chiqarish
-              </Button>
+              <div className="flex shrink-0 gap-2">
+                {m.leaveRequestedAt && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={rejectLeave.isPending}
+                    onClick={() => rejectLeave.mutate(m.id)}
+                  >
+                    Rad etish
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-destructive"
+                  disabled={setStatus.isPending}
+                  onClick={() =>
+                    confirm(
+                      m.leaveRequestedAt
+                        ? `${m.full_name} ning chiqish so'rovini tasdiqlaysizmi?`
+                        : `${m.full_name} ni guruhdan chiqarasizmi?`,
+                    ) && setStatus.mutate({ id: m.id, status: "cancelled" })
+                  }
+                >
+                  <Trash2 className="mr-1 h-4 w-4" /> Chiqarish
+                </Button>
+              </div>
             </div>
           ))}
         </CardContent>

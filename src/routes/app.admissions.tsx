@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, Clock, Users, Send, X, Check, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { Topbar } from "@/components/topbar";
+import { LeaveRequestDialog } from "@/components/student/leave-request-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +13,15 @@ import { useAuth } from "@/lib/auth";
 import {
   WEEKDAYS,
   GROUP_STATUS,
+  GROUP_STATUS_COLOR,
   formatPrice,
   pricePeriodLabel,
   formatScheduleTime,
+  schedulesConflict,
   type GroupStatus,
   type MembershipStatus,
 } from "@/lib/groups";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/admissions")({
   component: Admissions,
@@ -40,7 +44,15 @@ type OpenGroup = {
   approved: number;
 };
 
-type MyMembership = { id: string; status: MembershipStatus };
+type MyMembership = { id: string; status: MembershipStatus; leaveRequestedAt: string | null };
+
+type ScheduleRow = {
+  id: string;
+  name: string;
+  schedule_days: number[] | null;
+  start_time: string | null;
+  end_time: string | null;
+};
 
 function Admissions() {
   const qc = useQueryClient();
@@ -87,19 +99,41 @@ function Admissions() {
         };
       });
 
-      const { data: mine } = await supabase
-        .from("group_members")
-        .select("id, group_id, status")
-        .eq("user_id", user!.id);
+      const mineRows =
+        (await supabase.from("group_members").select("*").eq("user_id", user!.id)).data ?? [];
       const myByGroup = new Map<string, MyMembership>();
-      for (const m of mine ?? []) myByGroup.set(m.group_id, { id: m.id, status: m.status });
+      for (const m of mineRows)
+        myByGroup.set(m.group_id, {
+          id: m.id,
+          status: m.status,
+          leaveRequestedAt: m.leave_requested_at ?? null,
+        });
 
-      return { groups, myByGroup };
+      // O'quvchi allaqachon a'zo/kutilayotgan guruhlari jadvali — vaqt
+      // to'qnashuvini ishonchli tekshirish uchun (ro'yxatdan mustaqil).
+      const activeIds = mineRows
+        .filter((m) => m.status === "pending" || m.status === "approved")
+        .map((m) => m.group_id);
+      let mySchedules: ScheduleRow[] = [];
+      if (activeIds.length) {
+        const { data: sched } = await supabase
+          .from("groups")
+          .select("id, name, schedule_days, start_time, end_time")
+          .in("id", activeIds);
+        mySchedules = sched ?? [];
+      }
+
+      return { groups, myByGroup, mySchedules };
     },
   });
 
   const groups = data?.groups ?? [];
   const myByGroup = data?.myByGroup ?? new Map<string, MyMembership>();
+  const mySchedules = data?.mySchedules ?? [];
+
+  // Tanlanmoqchi bo'lgan guruh o'quvchining mavjud guruhlari bilan vaqt jihatdan to'qnashadimi
+  const conflictFor = (g: OpenGroup): ScheduleRow | null =>
+    mySchedules.find((x) => x.id !== g.id && schedulesConflict(x, g)) ?? null;
 
   const requestJoin = useMutation({
     mutationFn: async (groupId: string) => {
@@ -137,6 +171,18 @@ function Admissions() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Dars vaqti to'qnashuvini tekshirib so'rov yuborish (qo'shimcha himoya)
+  const tryJoin = (g: OpenGroup) => {
+    const clash = conflictFor(g);
+    if (clash) {
+      toast.error(
+        `Dars vaqti "${clash.name}" guruhi bilan to'qnashadi. Avval o'zingiz uchun muhimrog'ini tanlang.`,
+      );
+      return;
+    }
+    requestJoin.mutate(g.id);
+  };
 
   const groupsByDay = useMemo(() => {
     const map = new Map<number, OpenGroup[]>();
@@ -178,10 +224,13 @@ function Admissions() {
                       {(groupsByDay.get(w.value) ?? []).map((g) => (
                         <div
                           key={g.id}
-                          className="rounded-md bg-card px-2 py-1.5 text-xs shadow-sm"
+                          className={cn(
+                            "rounded-md border px-2 py-1.5 text-xs",
+                            GROUP_STATUS_COLOR[g.status].chip,
+                          )}
                         >
                           <div className="font-medium leading-tight">{g.name}</div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="text-[11px] opacity-80">
                             {formatScheduleTime(g.start_time, g.end_time) || "—"}
                           </div>
                         </div>
@@ -214,6 +263,7 @@ function Admissions() {
             const mine = myByGroup.get(g.id);
             const full = g.approved >= g.capacity;
             const recruiting = g.status === "recruiting";
+            const clash = mine ? null : conflictFor(g);
             return (
               <Card key={g.id} className="overflow-hidden">
                 <CardContent className="space-y-3 p-5">
@@ -269,17 +319,26 @@ function Admissions() {
                         <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success">
                           <Check className="h-4 w-4" /> Siz bu guruh a'zosisiz
                         </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive"
-                          disabled={cancel.isPending}
-                          onClick={() =>
-                            confirm(`"${g.name}" guruhidan chiqasizmi?`) && cancel.mutate(mine.id)
-                          }
-                        >
-                          Chiqish
-                        </Button>
+                        {g.status === "active" ? (
+                          <LeaveRequestDialog
+                            membershipId={mine.id}
+                            groupName={g.name}
+                            leaveRequested={!!mine.leaveRequestedAt}
+                            invalidateKeys={[dataKey]}
+                          />
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive"
+                            disabled={cancel.isPending}
+                            onClick={() =>
+                              confirm(`"${g.name}" guruhidan chiqasizmi?`) && cancel.mutate(mine.id)
+                            }
+                          >
+                            Chiqish
+                          </Button>
+                        )}
                       </div>
                     ) : mine?.status === "pending" ? (
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -304,12 +363,21 @@ function Admissions() {
                       <Button size="sm" className="w-full" disabled variant="secondary">
                         Joylar to'lgan
                       </Button>
+                    ) : clash ? (
+                      <div className="space-y-1.5">
+                        <Button size="sm" className="w-full" disabled variant="secondary">
+                          <X className="mr-1 h-4 w-4" /> Dars vaqti band
+                        </Button>
+                        <p className="text-center text-[11px] text-destructive">
+                          "{clash.name}" guruhi bilan vaqti to'qnashadi
+                        </p>
+                      </div>
                     ) : (
                       <Button
                         size="sm"
                         className="w-full"
                         disabled={requestJoin.isPending}
-                        onClick={() => requestJoin.mutate(g.id)}
+                        onClick={() => tryJoin(g)}
                       >
                         <Send className="mr-1 h-4 w-4" /> Qo'shilish uchun so'rov yuborish
                       </Button>

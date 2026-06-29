@@ -40,7 +40,7 @@ type NavItem = {
   url: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
-  badge?: "notif";
+  badge?: "notif" | "groups";
 };
 
 type NavGroup = { label: string; items: NavItem[] };
@@ -51,7 +51,7 @@ const groups: NavGroup[] = [
     items: [
       { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
       { title: "Yo'nalishlar", url: "/admin/courses", icon: BookOpen },
-      { title: "Guruhlar", url: "/admin/groups", icon: Users2 },
+      { title: "Guruhlar", url: "/admin/groups", icon: Users2, badge: "groups" },
       { title: "O'quvchilar", url: "/admin/students", icon: Users },
       { title: "O'quvchilar statistikasi", url: "/admin/student-stats", icon: BarChart3 },
     ],
@@ -93,6 +93,20 @@ export function AdminSidebar() {
 
   const { data: notifs = [] } = useNotifications();
   const unread = notifs.filter((n) => !n.is_read).length;
+
+  // Guruhga qo'shilish + chiqish so'rovlari soni (Guruhlar menyusida badge)
+  const { data: requestsCount = 0 } = useQuery({
+    queryKey: ["admin-sidebar", "group-requests"],
+    enabled: !!user,
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const { data } = await supabase.from("group_members").select("*");
+      const rows = data ?? [];
+      const pending = rows.filter((m) => m.status === "pending").length;
+      const leave = rows.filter((m) => m.status === "approved" && m.leave_requested_at).length;
+      return pending + leave;
+    },
+  });
 
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
@@ -153,7 +167,9 @@ export function AdminSidebar() {
               <SidebarMenu className="gap-1">
                 {group.items.map((item) => {
                   const active = item.exact ? pathname === item.url : pathname.startsWith(item.url);
-                  const showBadge = item.badge === "notif" && unread > 0;
+                  const badgeCount =
+                    item.badge === "notif" ? unread : item.badge === "groups" ? requestsCount : 0;
+                  const showBadge = badgeCount > 0;
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton
@@ -191,7 +207,7 @@ export function AdminSidebar() {
                           {showBadge && (
                             <>
                               <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground shadow-sm group-data-[collapsible=icon]:hidden">
-                                {unread > 9 ? "9+" : unread}
+                                {badgeCount > 9 ? "9+" : badgeCount}
                               </span>
                               <span className="absolute right-1.5 top-1.5 hidden h-2.5 w-2.5 group-data-[collapsible=icon]:block">
                                 <span className="animate-badge-ping absolute inset-0 rounded-full bg-destructive" />

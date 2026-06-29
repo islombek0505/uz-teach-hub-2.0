@@ -32,6 +32,27 @@ export const GROUP_STATUS_ORDER: GroupStatus[] = [
   "archived",
 ];
 
+// Kalendar / jadval chiplari uchun ranglar (holat bo'yicha farqlash)
+export const GROUP_STATUS_COLOR: Record<GroupStatus, { chip: string; dot: string }> = {
+  draft: { chip: "bg-muted text-muted-foreground border-border", dot: "bg-muted-foreground/50" },
+  recruiting: {
+    chip: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300",
+    dot: "bg-emerald-500",
+  },
+  active: {
+    chip: "bg-blue-500/15 text-blue-700 border-blue-500/30 dark:text-blue-300",
+    dot: "bg-blue-500",
+  },
+  completed: {
+    chip: "bg-zinc-400/15 text-zinc-600 border-zinc-400/30 dark:text-zinc-300",
+    dot: "bg-zinc-400",
+  },
+  archived: {
+    chip: "bg-muted text-muted-foreground border-border",
+    dot: "bg-muted-foreground/40",
+  },
+};
+
 export const MEMBERSHIP_STATUS: Record<MembershipStatus, { label: string; variant: BadgeVariant }> =
   {
     pending: { label: "Kutilmoqda", variant: "outline" },
@@ -39,6 +60,25 @@ export const MEMBERSHIP_STATUS: Record<MembershipStatus, { label: string; varian
     rejected: { label: "Rad etilgan", variant: "destructive" },
     cancelled: { label: "Bekor qilingan", variant: "outline" },
   };
+
+type ScheduleLike = {
+  schedule_days: number[] | null;
+  start_time: string | null;
+  end_time: string | null;
+};
+
+/** Ikki guruh jadvali to'qnashadimi: umumiy kun bor va vaqt oralig'i kesishadi. */
+export function schedulesConflict(a: ScheduleLike, b: ScheduleLike): boolean {
+  const daysA = new Set(a.schedule_days ?? []);
+  const sharedDay = (b.schedule_days ?? []).some((d) => daysA.has(d));
+  if (!sharedDay) return false;
+  const s1 = a.start_time ?? "00:00";
+  const e1 = a.end_time ?? "23:59:59";
+  const s2 = b.start_time ?? "00:00";
+  const e2 = b.end_time ?? "23:59:59";
+  // Vaqt oralig'i kesishishi (string "HH:MM[:SS]" leksikografik solishtiriladi)
+  return s1 < e2 && s2 < e1;
+}
 
 export function formatPrice(amount: number | null | undefined): string {
   const n = Number(amount ?? 0);
